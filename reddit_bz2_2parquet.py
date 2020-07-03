@@ -12,7 +12,7 @@ conf = conf.set('spark.sql.crossJoin.enabled',"true")
 spark = SparkSession.builder.getOrCreate()
 sc = spark.sparkContext
 
-globstr = "/gscratch/comdata/raw_data/reddit_dumps/RC_20*.bz2"
+globstr = "/gscratch/comdata/raw_data/reddit_dumps/comments/RC_20*.bz2"
 
 import re
 import glob
@@ -100,13 +100,13 @@ schema = StructType().add("id", StringType(), True)
 schema = schema.add("subreddit", StringType(), True)
 schema = schema.add("link_id", StringType(), True)
 schema = schema.add("parent_id", StringType(), True)
-schema = schema.add("created_utc", DateType(), True)
+schema = schema.add("created_utc", TimestampType(), True)
 schema = schema.add("author", StringType(), True)
 schema = schema.add("ups", LongType(), True)
 schema = schema.add("downs", LongType(), True)
 schema = schema.add("score", LongType(), True)
 schema = schema.add("edited", BooleanType(), True)
-schema = schema.add("time_edited", DateType(), True)
+schema = schema.add("time_edited", TimestampType(), True)
 schema = schema.add("subreddit_type", StringType(), True)
 schema = schema.add("subreddit_id", StringType(), True)
 schema = schema.add("stickied", BooleanType(), True)
@@ -119,10 +119,14 @@ rows = comments.map(lambda c: parse_comment(c, schema.fieldNames()))
 
 df =  sqlContext.createDataFrame(rows, schema)
 
+df = df.withColumn("subreddit_2", f.lower(f.col('subreddit')))
+df = df.drop('subreddit')
+df = df.withColumnRenamed('subreddit_2','subreddit')
+
 df = df.withColumnRenamed("created_utc","CreatedAt")
 df = df.withColumn("Month",f.month(f.col("CreatedAt")))
 df = df.withColumn("Year",f.year(f.col("CreatedAt")))
 df = df.withColumn("Day",f.dayofmonth(f.col("CreatedAt")))
 df = df.withColumn("subreddit_hash",f.sha2(f.col("subreddit"), 256)[0:3])
 df = df.sort(["subreddit","author","link_id","parent_id","Year","Month","Day"],ascending=True)
-df.write.parquet("/gscratch/comdata/output/reddit_dumps/reddit_comments.parquet", partitionBy=["Year",'Month'],mode='overwrite')
+df.write.parquet("/gscratch/comdata/output/reddit_comments.parquet", partitionBy=["Year",'Month'],mode='overwrite')
