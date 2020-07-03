@@ -6,7 +6,7 @@ from pyspark.sql.types import *
 from pyspark import SparkConf, SparkContext
 from pyspark.sql import SparkSession, SQLContext
 
-conf = SparkConf().setAppName("Reddit to bz2")
+conf = SparkConf().setAppName("Reddit comments to parquet")
 conf = conf.set('spark.sql.crossJoin.enabled',"true")
 
 spark = SparkSession.builder.getOrCreate()
