@@ -1,7 +1,7 @@
 
 #!/usr/bin/env python3
 import pyspark
-from pyspark.sql import functions as f
+nfrom pyspark.sql import functions as f
 from pyspark.sql.types import *
 from pyspark import SparkConf, SparkContext
 from pyspark.sql import SparkSession, SQLContext
@@ -128,5 +128,8 @@ df = df.withColumn("Month",f.month(f.col("CreatedAt")))
 df = df.withColumn("Year",f.year(f.col("CreatedAt")))
 df = df.withColumn("Day",f.dayofmonth(f.col("CreatedAt")))
 df = df.withColumn("subreddit_hash",f.sha2(f.col("subreddit"), 256)[0:3])
-df = df.sort(["subreddit","author","link_id","parent_id","Year","Month","Day"],ascending=True)
-df.write.parquet("/gscratch/comdata/output/reddit_comments.parquet", partitionBy=["Year",'Month'],mode='overwrite')
+df2 = df.sort(["subreddit","author","link_id","parent_id","Year","Month","Day"],ascending=True)
+df2.write.parquet("/gscratch/comdata/output/reddit_comments_by_subreddit.parquet", partitionBy=["Year",'Month'],mode='overwrite')
+
+df3 = df.sort(["author","CreatetdAt","subreddit","link_id","parent_id","Year","Month","Day"],ascending=True)
+df3.write.parquet("/gscratch/comdata/output/reddit_comments_by_author.parquet", partitionBy=["Year",'Month'],mode='overwrite')
