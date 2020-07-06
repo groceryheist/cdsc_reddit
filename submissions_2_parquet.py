@@ -201,7 +201,7 @@ df2.write.parquet("/gscratch/comdata/output/reddit_submissions_by_subreddit.parq
 
 
 # we also want to have parquet files sorted by author then reddit. 
-df3 = df.sort(["author","subreddit","id","Year","Month","Day"],ascending=True)
+df3 = df.sort(["author","CreatedAt","subreddit","id","Year","Month","Day"],ascending=True)
 df3.write.parquet("/gscratch/comdata/output/reddit_submissions_by_author.parquet", partitionBy=["Year",'Month'], mode='overwrite')
 
 os.remove("/gscratch/comdata/output/reddit_submissions.parquet_temp")
