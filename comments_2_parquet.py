@@ -128,6 +128,10 @@ df = df.withColumn("Month",f.month(f.col("CreatedAt")))
 df = df.withColumn("Year",f.year(f.col("CreatedAt")))
 df = df.withColumn("Day",f.dayofmonth(f.col("CreatedAt")))
 df = df.withColumn("subreddit_hash",f.sha2(f.col("subreddit"), 256)[0:3])
+
+# cache so we don't have to extract everythin twice
+df = df.cache()
+
 df2 = df.sort(["subreddit","author","link_id","parent_id","Year","Month","Day"],ascending=True)
 df2.write.parquet("/gscratch/comdata/output/reddit_comments_by_subreddit.parquet", partitionBy=["Year",'Month'],mode='overwrite')
 
