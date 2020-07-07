@@ -1,8 +1,8 @@
 import pyarrow.dataset as ds
-import pyarrow as pa
+
 # A pyarrow dataset abstracts reading, writing, or filtering a parquet file. It does not read dataa into memory. 
 #dataset = ds.dataset(pathlib.Path('/gscratch/comdata/output/reddit_submissions_by_subreddit.parquet/'), format='parquet', partitioning='hive')
-dataset = ds.dataset('/gscratch/comdata/output/reddit_submissions_by_subreddit.parquet/', format='parquet', partitioning='hive')
+dataset = ds.dataset('/gscratch/comdata/output/reddit_comments_by_subreddit.parquet/', format='parquet')
 
 # let's get all the comments to two subreddits:
 subreddits_to_pull = ['seattle','seattlewa']
