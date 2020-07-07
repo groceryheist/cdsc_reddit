@@ -1,3 +1,5 @@
 /#*#
 /.#*
 /job_script.sh
+/pyspark
+/submission_shas_check.log
