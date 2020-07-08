@@ -17,16 +17,8 @@ def find_dumps(dumpdir, base_pattern):
     ext_priority = ['.zst','.xz','.bz2']
 
     for base, exts in dumpext.items():
-        found = False
-        if len(exts) == 1:
-            yield base + exts[0]
-            found = True
-        else:
-            for ext in ext_priority:
-                if ext in exts:
-                    yield base + ext
-                    found = True
-        assert(found == True)
+        ext = [ext for ext in ext_priority if ext in exts][0]
+        yield base + ext
 
 def open_fileset(files):
     for fh in files:
