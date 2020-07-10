@@ -16,7 +16,7 @@ import pyarrow.parquet as pq
 
 def parse_submission(post, names = None):
     if names is None:
-        names = ['id','author','subreddit','title','created_utc','permalink','url','domain','score','ups','downs','over_18','has_media','selftext','retrieved_on','num_comments','gilded','edited','time_edited','subreddit_type','subreddit_id','subreddit_subscribers','name','is_self','stickied','is_submitter','quarantine','error']
+        names = ['id','author','subreddit','title','created_utc','permalink','url','domain','score','ups','downs','over_18','has_media','selftext','retrieved_on','num_comments','gilded','edited','time_edited','subreddit_type','subreddit_id','subreddit_subscribers','name','is_self','stickied','quarantine','error']
 
     try:
         post = json.loads(post)
@@ -93,7 +93,6 @@ schema = pa.schema([
     pa.field('name',pa.string(),nullable=True),
     pa.field('is_self',pa.bool_(),nullable=True),
     pa.field('stickied',pa.bool_(),nullable=True),
-    pa.field('is_submitter',pa.bool_(),nullable=True),
     pa.field('quarantine',pa.bool_(),nullable=True),
     pa.field('error',pa.string(),nullable=True)])
 
