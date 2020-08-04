@@ -171,7 +171,7 @@ def gen_task_list():
     with open("tf_task_list",'w') as outfile:
         for f in files:
             if f.endswith(".parquet"):
-                outfile.write(f"python3 tf_reddit_comments.py weekly_tf {f}\n")
+                outfile.write(f"source python3 tf_comments.py weekly_tf {f}\n")
 
 if __name__ == "__main__":
     fire.Fire({"gen_task_list":gen_task_list,
