@@ -7,6 +7,7 @@ from collections import Counter
 import pandas as pd
 import os
 import datetime
+from nltk import wordpunct_tokenize, MWETokenizer
 
 # compute term frequencies for comments in each subreddit by week
 def weekly_tf(partition):
@@ -36,13 +37,15 @@ def weekly_tf(partition):
 
     subreddit_weeks = groupby(rows, lambda r: (r.subreddit, r.week))
 
+    tokenizer = MWETokenizer()
+
     def tf_comments(subreddit_weeks):
         for key, posts in subreddit_weeks:
             subreddit, week = key
             tfs = Counter([])
 
             for post in posts:
-                tfs.update(post.body.split())
+                tfs.update(tokenizer.tokenize(wordpunct_tokenize(post.body.lower())))
 
             for term, tf in tfs.items():
                 yield [subreddit, term, week, tf]
@@ -55,6 +58,7 @@ def weekly_tf(partition):
         while True:
             chunk = islice(outrows,outchunksize)
             pddf = pd.DataFrame(chunk, columns=schema.names)
+            print(pddf)
             table = pa.Table.from_pandas(pddf,schema=schema)
             if table.shape[0] == 0:
                 break
