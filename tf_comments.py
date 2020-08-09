@@ -64,7 +64,15 @@ def weekly_tf(partition, mwe_pass = 'first'):
 
     subreddit_weeks = groupby(rows, lambda r: (r.subreddit, r.week))
 
-    mwe_tokenize = MWETokenizer().tokenize
+    if mwe_pass != 'first':
+        mwe_dataset = ds.dataset(f'/gscratch/comdata/users/nathante/reddit_comment_ngrams_pwmi.parquet',format='parquet')
+        mwe_dataset = mwe_dataset.to_pandas(columns=['phrase','phraseCount','phrasePWMI'])
+        mwe_dataset = mwe_dataset.sort_values(['phrasePWMI'],ascending=False)
+        mwe_phrases = list(mwe_dataset.phrase[0:1000])
+        
+        
+        mwe_tokenize = MWETokenizer(mwe_phrases).tokenize
+        
 
     def remove_punct(sentence):
         new_sentence = []
@@ -119,6 +127,7 @@ def weekly_tf(partition, mwe_pass = 'first'):
 
         else:
             # remove stopWords
+            sentences = map(mwe_tokenize, sentences)
             sentences = map(lambda s: filter(lambda token: token not in stopWords, s), sentences)
             return chain(* sentences)
 
@@ -142,19 +151,17 @@ def weekly_tf(partition, mwe_pass = 'first'):
 
     outchunksize = 10000
 
-    with pq.ParquetWriter("/gscratch/comdata/users/nathante/reddit_tfidf_test.parquet_temp/{partition}",schema=schema,compression='snappy',flavor='spark') as writer, pq.ParquetWriter("/gscratch/comdata/users/nathante/reddit_tfidf_test_authors.parquet_temp/{partition}",schema=author_schema,compression='snappy',flavor='spark') as author_writer:
+    with pq.ParquetWriter(f"/gscratch/comdata/users/nathante/reddit_tfidf_test.parquet_temp/{partition}",schema=schema,compression='snappy',flavor='spark') as writer, pq.ParquetWriter(f"/gscratch/comdata/users/nathante/reddit_tfidf_test_authors.parquet_temp/{partition}",schema=author_schema,compression='snappy',flavor='spark') as author_writer:
         while True:
             chunk = islice(outrows,outchunksize)
             pddf = pd.DataFrame(chunk, columns=["is_token"] + schema.names)
-            print(pddf)
-            author_pddf = pddf.loc[pddf.is_token == False]
-            author_pddf = author_pddf.rename({'term':'author'}, axis='columns')
-            author_pddf = author_pddf.loc[:,author_schema.names]
-            
+
+            author_pddf = pddf.loc[pddf.is_token == False, schema.names]
             pddf = pddf.loc[pddf.is_token == True, schema.names]
 
-            print(pddf)
-            print(author_pddf)
+            author_pddf = author_pddf.rename({'term':'author'}, axis='columns')
+            author_pddf = author_pddf.loc[:,author_schema.names]
+
             table = pa.Table.from_pandas(pddf,schema=schema)
             author_table = pa.Table.from_pandas(author_pddf,schema=author_schema)
             if table.shape[0] == 0:
@@ -171,7 +178,7 @@ def gen_task_list():
     with open("tf_task_list",'w') as outfile:
         for f in files:
             if f.endswith(".parquet"):
-                outfile.write(f"source python3 tf_comments.py weekly_tf {f}\n")
+                outfile.write(f"python3 tf_comments.py weekly_tf {f}\n")
 
 if __name__ == "__main__":
     fire.Fire({"gen_task_list":gen_task_list,
