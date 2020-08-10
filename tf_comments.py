@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 import pyarrow as pa
 import pyarrow.dataset as ds
 import pyarrow.parquet as pq
@@ -35,6 +36,7 @@ def weekly_tf(partition, mwe_pass = 'first'):
     
     batches = dataset.to_batches(columns=['CreatedAt','subreddit','body','author'])
 
+
     schema = pa.schema([pa.field('subreddit', pa.string(), nullable=False),
                         pa.field('term', pa.string(), nullable=False),
                         pa.field('week', pa.date32(), nullable=False),
@@ -65,14 +67,15 @@ def weekly_tf(partition, mwe_pass = 'first'):
     subreddit_weeks = groupby(rows, lambda r: (r.subreddit, r.week))
 
     if mwe_pass != 'first':
-        mwe_dataset = ds.dataset(f'/gscratch/comdata/users/nathante/reddit_comment_ngrams_pwmi.parquet',format='parquet')
-        mwe_dataset = mwe_dataset.to_pandas(columns=['phrase','phraseCount','phrasePWMI'])
+        mwe_dataset = pd.read_feather(f'/gscratch/comdata/users/nathante/reddit_multiword_expressions.feather')
         mwe_dataset = mwe_dataset.sort_values(['phrasePWMI'],ascending=False)
-        mwe_phrases = list(mwe_dataset.phrase[0:1000])
-        
-        
-        mwe_tokenize = MWETokenizer(mwe_phrases).tokenize
-        
+        mwe_phrases = list(mwe_dataset.phrase)
+        mwe_phrases = [tuple(s.split(' ')) for s in mwe_phrases]
+        mwe_tokenizer = MWETokenizer(mwe_phrases)
+        mwe_tokenize = mwe_tokenizer.tokenize
+    
+    else:
+        mwe_tokenize = MWETokenizer().tokenize
 
     def remove_punct(sentence):
         new_sentence = []
@@ -129,7 +132,9 @@ def weekly_tf(partition, mwe_pass = 'first'):
             # remove stopWords
             sentences = map(mwe_tokenize, sentences)
             sentences = map(lambda s: filter(lambda token: token not in stopWords, s), sentences)
-            return chain(* sentences)
+            for sentence in sentences:
+                for token in sentence:
+                    yield token
 
     def tf_comments(subreddit_weeks):
         for key, posts in subreddit_weeks:
@@ -152,13 +157,15 @@ def weekly_tf(partition, mwe_pass = 'first'):
     outchunksize = 10000
 
     with pq.ParquetWriter(f"/gscratch/comdata/users/nathante/reddit_tfidf_test.parquet_temp/{partition}",schema=schema,compression='snappy',flavor='spark') as writer, pq.ParquetWriter(f"/gscratch/comdata/users/nathante/reddit_tfidf_test_authors.parquet_temp/{partition}",schema=author_schema,compression='snappy',flavor='spark') as author_writer:
+    
         while True:
+
             chunk = islice(outrows,outchunksize)
+            chunk = (c for c in chunk if c.subreddit is not None)
             pddf = pd.DataFrame(chunk, columns=["is_token"] + schema.names)
 
             author_pddf = pddf.loc[pddf.is_token == False, schema.names]
             pddf = pddf.loc[pddf.is_token == True, schema.names]
-
             author_pddf = author_pddf.rename({'term':'author'}, axis='columns')
             author_pddf = author_pddf.loc[:,author_schema.names]
 
@@ -173,12 +180,12 @@ def weekly_tf(partition, mwe_pass = 'first'):
         author_writer.close()
 
 
-def gen_task_list():
+def gen_task_list(mwe_pass='first'):
     files = os.listdir("/gscratch/comdata/output/reddit_comments_by_subreddit.parquet/")
     with open("tf_task_list",'w') as outfile:
         for f in files:
             if f.endswith(".parquet"):
-                outfile.write(f"python3 tf_comments.py weekly_tf {f}\n")
+                outfile.write(f"python3 tf_comments.py weekly_tf --mwe-pass {mwe_pass} {f}\n")
 
 if __name__ == "__main__":
     fire.Fire({"gen_task_list":gen_task_list,
