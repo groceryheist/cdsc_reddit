@@ -17,7 +17,7 @@ conf = conf.set('spark.sql.crossJoin.enabled',"true")
 conf = conf.set('spark.debug.maxToStringFields',200)
 sqlContext = pyspark.SQLContext(sc)
 
-df = spark.read.parquet("/gscratch/comdata/output/reddit_submissions_by_subreddit.parquet")
+df = spark.read.parquet("/gscratch/comdata/output/temp/reddit_submissions.parquet/")
 
 df = df.withColumn("subreddit_2", f.lower(f.col('subreddit')))
 df = df.drop('subreddit')
@@ -32,13 +32,11 @@ df = df.withColumn("subreddit_hash",f.sha2(f.col("subreddit"), 256)[0:3])
 df = df.repartition("subreddit")
 df2 = df.sort(["subreddit","CreatedAt","id"],ascending=True)
 df2 = df.sortWithinPartitions(["subreddit","CreatedAt","id"],ascending=True)
-df2.write.parquet("/gscratch/comdata/output/reddit_submissions_by_subreddit.parquet2", mode='overwrite',compression='snappy')
+df2.write.parquet("/gscratch/comdata/output/temp/reddit_submissions_by_subreddit.parquet2", mode='overwrite',compression='snappy')
 
 
 # # we also want to have parquet files sorted by author then reddit. 
 df = df.repartition("author")
 df3 = df.sort(["author","CreatedAt","id"],ascending=True)
 df3 = df.sortWithinPartitions(["author","CreatedAt","id"],ascending=True)
-df3.write.parquet("/gscratch/comdata/output/reddit_submissions_by_author.parquet2", mode='overwrite',compression='snappy')
-
-os.remove("/gscratch/comdata/output/reddit_submissions.parquet_temp")
+df3.write.parquet("/gscratch/comdata/output/temp/reddit_submissions_by_author.parquet2", mode='overwrite',compression='snappy')

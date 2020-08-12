@@ -1,4 +1,8 @@
+## needs to be run by hand since i don't have a nice way of waiting on a parallel-sql job to complete 
+
 #!/usr/bin/env bash
+
+
 
 echo "#!/usr/bin/bash" > job_script.sh
 echo "source $(pwd)/../bin/activate" >> job_script.sh
