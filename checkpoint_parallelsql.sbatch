@@ -10,11 +10,9 @@
 ## Walltime (12 hours)
 #SBATCH --time=12:00:00
 ## Memory per node
-#SBATCH --mem=100G
+#SBATCH --mem=32G
 #SBATCH --cpus-per-task=4
 #SBATCH --ntasks=1
-
-
 module load parallel_sql
 
 #Put here commands to load other modules (e.g. matlab etc.)

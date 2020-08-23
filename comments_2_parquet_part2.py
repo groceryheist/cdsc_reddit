@@ -26,4 +26,4 @@ df2.write.parquet("/gscratch/comdata/output/reddit_comments_by_subreddit.parquet
 df = df.repartition('author')
 df3 = df.sort(["author","CreatedAt","subreddit","link_id","parent_id","Year","Month","Day"],ascending=True)
 df3 = df3.sortWithinPartitions(["author","CreatedAt","subreddit","link_id","parent_id","Year","Month","Day"],ascending=True)
-df3.write.parquet("/gscratch/comdata/output/reddit_comments_by_author.parquet", mode='overwrite')
+df3.write.parquet("/gscratch/comdata/output/reddit_comments_by_author.parquet", mode='overwrite',compression='snappy')

@@ -161,9 +161,8 @@ def weekly_tf(partition, mwe_pass = 'first'):
         while True:
 
             chunk = islice(outrows,outchunksize)
-            chunk = (c for c in chunk if c.subreddit is not None)
+            chunk = (c for c in chunk if c[1] is not None)
             pddf = pd.DataFrame(chunk, columns=["is_token"] + schema.names)
-
             author_pddf = pddf.loc[pddf.is_token == False, schema.names]
             pddf = pddf.loc[pddf.is_token == True, schema.names]
             author_pddf = author_pddf.rename({'term':'author'}, axis='columns')
@@ -185,7 +184,7 @@ def gen_task_list(mwe_pass='first'):
     with open("tf_task_list",'w') as outfile:
         for f in files:
             if f.endswith(".parquet"):
-                outfile.write(f"python3 tf_comments.py weekly_tf --mwe-pass {mwe_pass} {f}\n")
+                outfile.write(f"./tf_comments.py weekly_tf --mwe-pass {mwe_pass} {f}\n")
 
 if __name__ == "__main__":
     fire.Fire({"gen_task_list":gen_task_list,
