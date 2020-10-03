@@ -5,8 +5,10 @@ import requests
 from os import path
 import hashlib
 
-shasums = requests.get("https://files.pushshift.io/reddit/comments/sha256sums.txt").text
+shasums1 = requests.get("https://files.pushshift.io/reddit/comments/sha256sum.txt").text
+shasums2 = requests.get("https://files.pushshift.io/reddit/comments/daily/sha256sum.txt").text
 
+shasums = shasums1 + shasums2
 dumpdir = "/gscratch/comdata/raw_data/reddit_dumps/comments"
 
 for l in shasums.strip().split('\n'):
