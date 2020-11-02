@@ -2,6 +2,7 @@
 title: Utilities for Reddit Data Science
 ---
 
+
 The reddit_cdsc project contains tools for working with Reddit data.  The project is designed for the hyak super computing system at The University of Washington.  It consists of a set of python and bash scripts and uses the [Pyspark](https://spark.apache.org/docs/latest/api/python/index.html "Pyspark documentation") and [pyarrow](https://arrow.apache.org/docs/python/ "documentation of python arrow bindings") to process large datasets.  As of November 1st 2020, the project is under active development by [Nate TeBlunthuis](https://wiki.communitydata.science/People#Nathan_TeBlunthuis_.28University_of_Washington.29 "Nate's profile on the Community Data Science Collective Wiki") and provides scripts for:
 
 - Pulling and updating dumps from [Pushshift](https://pushshift.io "Pushshift.io") in `pull_pushshift_comments.sh` and `pull_pushshift_submissions.sh`.
@@ -11,7 +12,6 @@ The reddit_cdsc project contains tools for working with Reddit data.  The projec
   - Detecting common phrases based on [Pointwise mutual information](https://en.wikipedia.org/wiki/Pointwise_mutual_information) "Wikipedia article on pointwise mutual information")
   - Building TF-IDF vectors for each subreddit `idf_comments.py` and (more experimentally) at the subreddit-week level `idf_comments_weekly.py` 
   - Computing cosine similarities between subreddits based on TF-IDF `term_cosine_similarity.py`. 
-
 
 Right now, two steps are still in earlier stages of progress:
 
@@ -70,3 +70,47 @@ I then combine them using some smoothing to get:
 
 $\mathrm{tfidf}_{t,d} = (0.5 + 0.5 \cdot \mathrm{tf}_{t,d}) \cdot \mathrm{idf}_{t}$ 
 
+### Building TF-IDF vectors ###
+
+The process for building TF-IDF vectors has four steps:
+
+1. Extracting terms using `tf_comments.py`
+2. Detecting common phrases using `top_comment_phrases.py`
+3. Extracting terms and common phrases using `tf_comments.py --mwe-pass='second'`
+4. Building idf and tf-idf scores in `idf_comments.py`
+
+#### Running `tf_comments.py` on the backfill queue ####
+
+The main reason that I did it in 4 steps instead of one is to take advantage of the backfill queue for running `tf_comments.py`.  This step requires reading all of the text in every comment and converting it to a bag of words at the subreddit-level.  This is a lot of computation that is easily parallelizable. The script `run_tf_jobs.sh` partially automates running steps 1 (or 3) on the backfill queue. 
+
+#### Phrase detection using Pointwise Mutual Information ####
+
+TF-IDF is simple, but only uses single words (unigrams).  Sequences of multiple words can be important to account for how words have different meanings in different contexts or how sequences of words refer to distinct things like names. Dealing with context or longer sequences of words is a common challenge in natural language processing since the number of possible n-grams grows like crazy as n gets bigger. Phrase detection helps this  problem by limiting the set of n-grams to those most informative. 
+
+But how do we detect phrases?  I implemented [Pointwise mutual information](https://en.wikipedia.org/wiki/Pointwise_mutual_information) "Wikipedia article on pointwise mutual information"), which is a pretty simple way, but seems to work pretty well. 
+
+PMI is an quantity derived from information theory. The intuition is that if two words occur together quite frequently compared to how often they appear separately then the cooccurrance is likely to be informative. 
+
+$\operatorname{pmi}(x;y) \equiv \log\frac{p(x,y)}{p(x)p(y)} = \log\frac{p(x|y)}{p(x)} = \log\frac{p(y|x)}{p(y)}.$
+
+In `tf_comments.py` if `--mwe-pass=first` then a 10\% sample of 1-4-grams (sequences of terms up to length 4) will be written to a file to be consumed by `top_comment_phrases.py`.  `top_comment_phrases.py` computes the PMI for these possible phrases and writes those that occur at least 3500 times in the sample of n-grams and have a PWMI of at least 3 (about 65000 expressions). 
+
+`tf_comments.py --mwe-pass=second` then uses the detected phrases and adds them to the term frequency data. 
+
+### Cosine Similarity ###
+
+Once the tf-idf vectors are built, making a similarity score between two subreddits is straightforward using cosine similarity. 
+
+$\text{similarity} = \cos(\theta) = {\mathbf{A} \cdot \mathbf{B} \over \|\mathbf{A}\| \|\mathbf{B}\|} = \frac{ \sum\limits_{i=1}^{n}{A_i  B_i} }{ \sqrt{\sum\limits_{i=1}^{n}{A_i^2}}  \sqrt{\sum\limits_{i=1}^{n}{B_i^2}} }$
+
+Intuitively, we represent two subreddits as lines in a high-dimensional space (tf-idf vectors). 
+In linear algebra, the dot product ($\cdot$) between two vectors takes their weighted sum (e.g. linear regression is a dot product of a vector of covariates and a vector of weights).  
+The vectors might have different lengths like if one subreddit has words in comments than the other, so in cosine similarity the dot product is normalized by the magnitude (lengths) of the vectors. 
+It turns out that this is equivalent to taking the cosine of the two vectors.  So cosine similarity in essence quantifies the angle between the two lines in high-dimensional space.  If the cosine similarity between two subreddits is greater then their tf-idf vectors are more correlated. 
+
+Cosine similarity with tf-idf is popular (indeed it has been applied to Reddit in research several times before) because it quantifies the correlation between the most characteristic terms for two communities.
+
+Compared to other approach to similarity like those using word embeddings or topic models it may struggle to handle polysemy, synonymy, or correlations between different terms.  Using phrase detection helps with this a little bit.  The advantages of this approach are simplicity and scalability.  I'm thinking about using [Latent Semantic Analysis](https://en.wikipedia.org/wiki/Latent_semantic_analysis "Wikipedia article on Latent semantic analysis") as an intermediate step to improve upon similarities based on raw tf-idfs. 
+
+Even still, computing similarities between a large number of subreddits is computationally expensive and requires $n^2$ dot-product evaluations. 
+This can be sped up by passing `similarity-threshold=X` where $X>0$ into `term_comment_similarity.py`.  I used a cosine similarity function that's built into the spark matrix library which supports the `DIMSUM` algorithm for approximating matrix-matrix products.  This algorithm is commonly used in industry (i.e. at Twitter, Google) for large-scale similarity scoring.
