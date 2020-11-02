@@ -40,6 +40,8 @@ def open_input_file(input_filename):
         cmd = ["xzcat",'-dk', '-T 20',input_filename]
     elif re.match(r'.*\.zst',input_filename):
         cmd = ['zstd','-dck', input_filename]
+    elif re.match(r'.*\.gz',input_filename):
+        cmd = ['gzip','-dc', input_filename]
     try:
         input_file = Popen(cmd, stdout=PIPE).stdout
     except NameError as e:
