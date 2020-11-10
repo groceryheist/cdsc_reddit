@@ -1,58 +1,53 @@
 from pyspark.sql import functions as f
 from pyspark.sql import SparkSession
+from pyspark.sql import Window
+
+## TODO:need to exclude automoderator / bot posts.
+## TODO:need to exclude better handle hyperlinks. 
 
 spark = SparkSession.builder.getOrCreate()
 df = spark.read.parquet("/gscratch/comdata/users/nathante/reddit_tfidf_test.parquet_temp")
 
-max_subreddit_week_terms = df.groupby(['subreddit','week']).max('tf')
-max_subreddit_week_terms = max_subreddit_week_terms.withColumnRenamed('max(tf)','sr_week_max_tf')
+include_subs = set(open("/gscratch/comdata/users/nathante/cdsc-reddit/top_25000_subs_by_comments.txt"))
+include_subs = {s.strip('\n') for s in include_subs}
 
-df = df.join(max_subreddit_week_terms, ['subreddit','week'])
+# aggregate counts by week. now subreddit-term is distinct
+df = df.filter(df.subreddit.isin(include_subs))
+df = df.groupBy(['subreddit','term']).agg(f.sum('tf').alias('tf'))
 
-df = df.withColumn("relative_tf", df.tf / df.sr_week_max_tf)
+max_subreddit_terms = df.groupby(['subreddit']).max('tf') # subreddits are unique
+max_subreddit_terms = max_subreddit_terms.withColumnRenamed('max(tf)','sr_max_tf')
 
-# group by term / week
-idf = df.groupby(['term','week']).count()
+df = df.join(max_subreddit_terms, on='subreddit')
 
-idf = idf.withColumnRenamed('count','idf')
+df = df.withColumn("relative_tf", df.tf / df.sr_max_tf)
 
-# output: term | week | df
-#idf.write.parquet("/gscratch/comdata/users/nathante/reddit_tfidf_test_sorted_tf.parquet_temp",mode='overwrite',compression='snappy')
+# group by term. term is unique
+idf = df.groupby(['term']).count()
+
+N_docs = df.select('subreddit').distinct().count()
+
+idf = idf.withColumn('idf',f.log(N_docs/f.col('count')))
 
 # collect the dictionary to make a pydict of terms to indexes
-terms = idf.select('term').distinct()
-terms = terms.withColumn('term_id',f.monotonically_increasing_id())
+terms = idf.select('term').distinct() # terms are distinct
+terms = terms.withColumn('term_id',f.row_number().over(Window.orderBy("term"))) # term ids are distinct
 
+# make subreddit ids
+subreddits = df.select(['subreddit']).distinct()
+subreddits = subreddits.withColumn('subreddit_id',f.row_number().over(Window.orderBy("subreddit")))
 
-# print('collected terms')
-
-# terms = [t.term for t in terms]
-# NTerms = len(terms)
-# term_id_map = {term:i for i,term in enumerate(sorted(terms))}
-
-# term_id_map = spark.sparkContext.broadcast(term_id_map)
-
-# print('term_id_map is broadcasted')
-
-# def map_term(x):
-#     return term_id_map.value[x]
-
-# map_term_udf = f.udf(map_term)
+df = df.join(subreddits,on='subreddit')
 
 # map terms to indexes in the tfs and the idfs
-df = df.join(terms,on='term')
+df = df.join(terms,on='term') # subreddit-term-id is unique
 
 idf = idf.join(terms,on='term')
 
-# join on subreddit/term/week to create tf/dfs indexed by term
-df = df.join(idf, on=['term_id','week','term'])
+# join on subreddit/term to create tf/dfs indexed by term
+df = df.join(idf, on=['term_id','term'])
 
 # agg terms by subreddit to make sparse tf/df vectors
-df = df.withColumn("tf_idf",df.relative_tf / df.sr_week_max_tf)
+df = df.withColumn("tf_idf", (0.5 + (0.5 * df.relative_tf) * df.idf))
 
-df = df.groupby(['subreddit','week']).agg(f.collect_list(f.struct('term_id','tf_idf')).alias('tfidf_maps'))
- 
-df = df.withColumn('tfidf_vec', f.map_from_entries('tfidf_maps'))
-
-# output: subreddit | week | tf/df
-df.write.parquet('/gscratch/comdata/users/nathante/test_tfidf.parquet',mode='overwrite',compression='snappy')
+df.write.parquet('/gscratch/comdata/users/nathante/subreddit_tfidf.parquet',mode='overwrite',compression='snappy')
