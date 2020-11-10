@@ -47,7 +47,7 @@ https://stanford.edu/~rezab/papers/dimsum.pdf. If similarity_threshold=0 we get 
     if exclude_phrases == True:
         tfidf = tfidf.filter(~f.col(term).contains("_"))
 
-    sim_dist, tfidf = cosine_similarities(tfidf, 'term', min_df, include_subreddits, similarity_threshold)
+    sim_dist, tfidf = cosine_similarities(tfidf, 'term', min_df, included_subreddits, similarity_threshold)
 
     p = Path(outfile)
 
