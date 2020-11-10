@@ -1,22 +1,21 @@
 from pyspark.sql import functions as f
 from pyspark.sql import SparkSession
 from pyspark.sql import Window
-from pyspark.mllib.linalg.distributed import RowMatrix, CoordinateMatrix
 import numpy as np
 import pyarrow
 import pandas as pd
 import fire
 from itertools import islice
 from pathlib import Path
-from similarities_helper import build_cosine_similarities
+from similarities_helper import cosine_similarities
 
 spark = SparkSession.builder.getOrCreate()
 conf = spark.sparkContext.getConf()
 
 # outfile = '/gscratch/comdata/users/nathante/test_similarities_500.feather'; min_df = None; included_subreddits=None; similarity_threshold=0;
-def term_cosine_similarities(outfile, min_df = None, included_subreddits=None, similarity_threshold=0, topN=500, exclude_phrases=True):
+def author_cosine_similarities(outfile, min_df = None, included_subreddits=None, similarity_threshold=0, topN=500, exclude_phrases=True):
     '''
-    Compute similarities between subreddits based on tfi-idf vectors of comment texts 
+    Compute similarities between subreddits based on tfi-idf vectors of author comments
     
     included_subreddits : string
         Text file containing a list of subreddits to include (one per line) if included_subreddits is None then do the top 500 subreddits
@@ -35,7 +34,7 @@ https://stanford.edu/~rezab/papers/dimsum.pdf. If similarity_threshold=0 we get 
     print(outfile)
     print(exclude_phrases)
 
-    tfidf = spark.read.parquet('/gscratch/comdata/users/nathante/subreddit_tfidf.parquet')
+    tfidf = spark.read.parquet('/gscratch/comdata/users/nathante/subreddit_tfidf_authors.parquet_test1/part-00000-107cee94-92d8-4265-b804-40f1e7f1aaf2-c000.snappy.parquet')
 
     if included_subreddits is None:
         included_subreddits = list(islice(open("/gscratch/comdata/users/nathante/cdsc-reddit/top_25000_subs_by_comments.txt"),topN))
@@ -44,18 +43,17 @@ https://stanford.edu/~rezab/papers/dimsum.pdf. If similarity_threshold=0 we get 
     else:
         included_subreddits = set(open(included_subreddits))
 
-    if exclude_phrases == True:
-        tfidf = tfidf.filter(~f.col(term).contains("_"))
-
-    sim_dist, tfidf = cosine_similarities(tfidf, 'term', min_df, include_subreddits, similarity_threshold)
+    sim_dist, tfidf = cosine_similarities(tfidf, 'author', min_df, included_subreddits, similarity_threshold)
 
     p = Path(outfile)
 
     output_feather =  Path(str(p).replace("".join(p.suffixes), ".feather"))
     output_csv =  Path(str(p).replace("".join(p.suffixes), ".csv"))
     output_parquet =  Path(str(p).replace("".join(p.suffixes), ".parquet"))
+    sim_dist = sim_dist.entries.toDF()
 
-    sim_dist.entries.toDF().write.parquet(str(output_parquet),mode='overwrite',compression='snappy')
+    sim_dist = sim_dist.repartition(1)
+    sim_dist.write.parquet(str(output_parquet),mode='overwrite',compression='snappy')
     
     spark.stop()
 
