@@ -1,43 +1,19 @@
-from pyspark.sql import functions as f
 from pyspark.sql import SparkSession
+from similarities_helper import build_tfidf_dataset
 
+## TODO:need to exclude automoderator / bot posts.
+## TODO:need to exclude better handle hyperlinks. 
 spark = SparkSession.builder.getOrCreate()
-df = spark.read.parquet("/gscratch/comdata/users/nathante/reddit_tfidf_test_authors.parquet_temp/")
 
-max_subreddit_week_authors = df.groupby(['subreddit','week']).max('tf')
-max_subreddit_week_authors = max_subreddit_week_authors.withColumnRenamed('max(tf)','sr_week_max_tf')
+df = spark.read.parquet("/gscratch/comdata/users/nathante/reddit_tfidf_test_authors.parquet_temp/part-00000-d61007de-9cbe-4970-857f-b9fd4b35b741-c000.snappy.parquet")
 
-df = df.join(max_subreddit_week_authors, ['subreddit','week'])
+include_subs = set(open("/gscratch/comdata/users/nathante/cdsc-reddit/top_25000_subs_by_comments.txt"))
+include_subs = {s.strip('\n') for s in include_subs}
+df = df.filter(df.author != '[deleted]')
+df = df.filter(df.author != 'AutoModerator')
 
-df = df.withColumn("relative_tf", df.tf / df.sr_week_max_tf)
+df = build_tfidf_dataset(df, include_subs, 'author')
 
-# group by term / week
-idf = df.groupby(['author','week']).count()
+df.cache()
 
-idf = idf.withColumnRenamed('count','idf')
-
-# output: term | week | df
-#idf.write.parquet("/gscratch/comdata/users/nathante/reddit_tfidf_test_sorted_tf.parquet_temp",mode='overwrite',compression='snappy')
-
-# collect the dictionary to make a pydict of terms to indexes
-authors = idf.select('author').distinct()
-authors = authors.withColumn('author_id',f.monotonically_increasing_id())
-
-
-# map terms to indexes in the tfs and the idfs
-df = df.join(authors,on='author')
-
-idf = idf.join(authors,on='author')
-
-# join on subreddit/term/week to create tf/dfs indexed by term
-df = df.join(idf, on=['author_id','week','author'])
-
-# agg terms by subreddit to make sparse tf/df vectors
-df = df.withColumn("tf_idf",df.relative_tf / df.sr_week_max_tf)
- 
-df = df.groupby(['subreddit','week']).agg(f.collect_list(f.struct('author_id','tf_idf')).alias('tfidf_maps'))
- 
-df = df.withColumn('tfidf_vec', f.map_from_entries('tfidf_maps'))
-
-# output: subreddit | week | tf/df
-df.write.json('/gscratch/comdata/users/nathante/test_tfidf_authors.parquet',mode='overwrite',compression='snappy')
+df.write.parquet('/gscratch/comdata/users/nathante/subreddit_tfidf_authors.parquet',mode='overwrite',compression='snappy')
