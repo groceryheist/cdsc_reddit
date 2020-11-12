@@ -28,7 +28,7 @@ tsne_model = TSNE(2,learning_rate=200,perplexity=40,n_iter=5000,metric='precompu
 
 tsne_fit_model = tsne_model.fit(dist)
 
-tsne_fit_whole = tsne_fit_model.fit_transform(mat)
+tsne_fit_whole = tsne_fit_model.fit_transform(dist)
 
 plot_data = pd.DataFrame({'x':tsne_fit_whole[:,0],'y':tsne_fit_whole[:,1], 'subreddit':col_names})
 
