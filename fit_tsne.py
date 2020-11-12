@@ -24,7 +24,7 @@ mat = np.stack(mat)
 mat = mat + np.tril(mat.transpose(),k=-1)
 dist = 2*np.arccos(mat)/np.pi
 
-tsne_model = TSNE(2,learning_rate=500,perplexity=50,n_iter=10000,metric='precomputed',early_exaggeration=20,n_jobs=-1)
+tsne_model = TSNE(2,learning_rate=750,perplexity=50,n_iter=10000,metric='precomputed',early_exaggeration=20,n_jobs=-1)
 
 tsne_fit_model = tsne_model.fit(dist)
 
