@@ -71,8 +71,8 @@ https://stanford.edu/~rezab/papers/dimsum.pdf. If similarity_threshold=0 we get 
     similarities = similarities.join(df, on='j')
     similarities = similarities.rename(columns={'subreddit':"subreddit_j"})
 
-    similarities.write_feather(output_feather)
-    similarities.write_csv(output_csv)
+    similarities.to_feather(output_feather)
+    similarities.to_csv(output_csv)
     return similarities
     
 if __name__ == '__main__':
