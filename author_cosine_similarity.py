@@ -13,7 +13,7 @@ spark = SparkSession.builder.getOrCreate()
 conf = spark.sparkContext.getConf()
 
 # outfile = '/gscratch/comdata/users/nathante/test_similarities_500.feather'; min_df = None; included_subreddits=None; similarity_threshold=0;
-def author_cosine_similarities(outfile, min_df = None, included_subreddits=None, similarity_threshold=0, topN=500, exclude_phrases=True):
+def author_cosine_similarities(outfile, min_df = None, included_subreddits=None, similarity_threshold=0, topN=500):
     '''
     Compute similarities between subreddits based on tfi-idf vectors of author comments
     
@@ -32,9 +32,8 @@ https://stanford.edu/~rezab/papers/dimsum.pdf. If similarity_threshold=0 we get 
 '''
 
     print(outfile)
-    print(exclude_phrases)
 
-    tfidf = spark.read.parquet('/gscratch/comdata/users/nathante/subreddit_tfidf_authors.parquet_test1/part-00000-107cee94-92d8-4265-b804-40f1e7f1aaf2-c000.snappy.parquet')
+    tfidf = spark.read.parquet('/gscratch/comdata/users/nathante/subreddit_tfidf_authors.parquet')
 
     if included_subreddits is None:
         included_subreddits = list(islice(open("/gscratch/comdata/users/nathante/cdsc-reddit/top_25000_subs_by_comments.txt"),topN))
@@ -55,12 +54,14 @@ https://stanford.edu/~rezab/papers/dimsum.pdf. If similarity_threshold=0 we get 
     sim_dist = sim_dist.repartition(1)
     sim_dist.write.parquet(str(output_parquet),mode='overwrite',compression='snappy')
     
-    spark.stop()
+
 
     #instead of toLocalMatrix() why not read as entries and put strait into numpy
     sim_entries = pd.read_parquet(output_parquet)
 
     df = tfidf.select('subreddit','subreddit_id_new').distinct().toPandas()
+
+    spark.stop()
     df['subreddit_id_new'] = df['subreddit_id_new'] - 1
     df = df.sort_values('subreddit_id_new').reset_index(drop=True)
     df = df.set_index('subreddit_id_new')
@@ -75,4 +76,4 @@ https://stanford.edu/~rezab/papers/dimsum.pdf. If similarity_threshold=0 we get 
     return similarities
     
 if __name__ == '__main__':
-    fire.Fire(term_cosine_similarities)
+    fire.Fire(author_cosine_similarities)

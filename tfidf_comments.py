@@ -15,3 +15,4 @@ include_subs = {s.strip('\n') for s in include_subs}
 df = build_tfidf_dataset(df, include_subs, 'term')
 
 df.write.parquet('/gscratch/comdata/users/nathante/subreddit_tfidf.parquet',mode='overwrite',compression='snappy')
+spark.stop()

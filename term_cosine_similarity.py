@@ -8,7 +8,7 @@ import pandas as pd
 import fire
 from itertools import islice
 from pathlib import Path
-from similarities_helper import build_cosine_similarities
+from similarities_helper import cosine_similarities
 
 spark = SparkSession.builder.getOrCreate()
 conf = spark.sparkContext.getConf()
@@ -57,12 +57,11 @@ https://stanford.edu/~rezab/papers/dimsum.pdf. If similarity_threshold=0 we get 
 
     sim_dist.entries.toDF().write.parquet(str(output_parquet),mode='overwrite',compression='snappy')
     
-    spark.stop()
-
     #instead of toLocalMatrix() why not read as entries and put strait into numpy
     sim_entries = pd.read_parquet(output_parquet)
 
     df = tfidf.select('subreddit','subreddit_id_new').distinct().toPandas()
+    spark.stop()
     df['subreddit_id_new'] = df['subreddit_id_new'] - 1
     df = df.sort_values('subreddit_id_new').reset_index(drop=True)
     df = df.set_index('subreddit_id_new')

@@ -13,8 +13,12 @@
 #SBATCH --mem=32G
 #SBATCH --cpus-per-task=4
 #SBATCH --ntasks=1
+#SBATCH -D /gscratch/comdata/users/nathante/cdsc-reddit
+source ./bin/activate
 module load parallel_sql
-
+echo $(which perl)
+conda list pyarrow
+which python3
 #Put here commands to load other modules (e.g. matlab etc.)
 #Below command means that parallel_sql will get tasks from the database
 #and run them on the node (in parallel). So a 16 core node will have

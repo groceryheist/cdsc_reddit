@@ -14,7 +14,7 @@ def find_dumps(dumpdir, base_pattern):
         fname, ext = path.splitext(fpath)
         dumpext[fname].append(ext)
 
-    ext_priority = ['.zst','.xz','.bz2']
+    ext_priority = ['.zst','.xz','.bz2','.gz']
 
     for base, exts in dumpext.items():
         ext = [ext for ext in ext_priority if ext in exts][0]
