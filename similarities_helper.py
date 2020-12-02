@@ -119,6 +119,59 @@ def cosine_similarities(tfidf, term_colname, min_df, included_subreddits, simila
     return (sim_dist, tfidf)
 
 
+def build_weekly_tfidf_dataset(df, include_subs, term_colname, tf_family=tf_weight.Norm05):
+    term = term_colname
+    term_id = term + '_id'
+
+    # aggregate counts by week. now subreddit-term is distinct
+    df = df.filter(df.subreddit.isin(include_subs))
+    df = df.groupBy(['subreddit',term,'week']).agg(f.sum('tf').alias('tf'))
+
+    max_subreddit_terms = df.groupby(['subreddit','week']).max('tf') # subreddits are unique
+    max_subreddit_terms = max_subreddit_terms.withColumnRenamed('max(tf)','sr_max_tf')
+    df = df.join(max_subreddit_terms, on=['subreddit','week'])
+    df = df.withColumn("relative_tf", df.tf / df.sr_max_tf)
+
+    # group by term. term is unique
+    idf = df.groupby([term,'week']).count()
+
+    N_docs = df.select(['subreddit','week']).distinct().groupby(['week']).agg(f.count("subreddit").alias("subreddits_in_week"))
+
+    idf = idf.join(N_docs, on=['week'])
+
+    # add a little smoothing to the idf
+    idf = idf.withColumn('idf',f.log(idf.subreddits_in_week) / (1+f.col('count'))+1)
+
+    # collect the dictionary to make a pydict of terms to indexes
+    terms = idf.select([term,'week']).distinct() # terms are distinct
+
+    terms = terms.withColumn(term_id,f.row_number().over(Window.partitionBy('week').orderBy(term))) # term ids are distinct
+
+    # make subreddit ids
+    subreddits = df.select(['subreddit','week']).distinct()
+    subreddits = subreddits.withColumn('subreddit_id',f.row_number().over(Window.partitionBy("week").orderBy("subreddit")))
+
+    df = df.join(subreddits,on=['subreddit','week'])
+
+    # map terms to indexes in the tfs and the idfs
+    df = df.join(terms,on=[term,'week']) # subreddit-term-id is unique
+
+    idf = idf.join(terms,on=[term,'week'])
+
+    # join on subreddit/term to create tf/dfs indexed by term
+    df = df.join(idf, on=[term_id, term,'week'])
+
+    # agg terms by subreddit to make sparse tf/df vectors
+    
+    if tf_family == tf_weight.MaxTF:
+        df = df.withColumn("tf_idf",  df.relative_tf * df.idf)
+    else: # tf_fam = tf_weight.Norm05
+        df = df.withColumn("tf_idf",  (0.5 + 0.5 * df.relative_tf) * df.idf)
+
+    return df
+
+
+
 def build_tfidf_dataset(df, include_subs, term_colname, tf_family=tf_weight.Norm05):
 
     term = term_colname
