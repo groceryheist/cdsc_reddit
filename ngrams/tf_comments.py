@@ -7,7 +7,6 @@ from itertools import groupby, islice, chain
 import fire
 from collections import Counter
 import os
-import datetime
 import re
 from nltk import wordpunct_tokenize, MWETokenizer, sent_tokenize
 from nltk.corpus import stopwords
@@ -31,8 +30,8 @@ def weekly_tf(partition, mwe_pass = 'first'):
     ngram_output = partition.replace("parquet","txt")
 
     if mwe_pass == 'first':
-        if os.path.exists(f"/gscratch/comdata/users/nathante/reddit_comment_ngrams_10p_sample/{ngram_output}"):
-            os.remove(f"/gscratch/comdata/users/nathante/reddit_comment_ngrams_10p_sample/{ngram_output}")
+        if os.path.exists(f"/gscratch/comdata/output/reddit_ngrams/comment_ngrams_10p_sample/{ngram_output}"):
+            os.remove(f"/gscratch/comdata/output/reddit_ngrams/comment_ngrams_10p_sample/{ngram_output}")
     
     batches = dataset.to_batches(columns=['CreatedAt','subreddit','body','author'])
 
@@ -67,7 +66,7 @@ def weekly_tf(partition, mwe_pass = 'first'):
     subreddit_weeks = groupby(rows, lambda r: (r.subreddit, r.week))
 
     if mwe_pass != 'first':
-        mwe_dataset = pd.read_feather(f'/gscratch/comdata/users/nathante/reddit_multiword_expressions.feather')
+        mwe_dataset = pd.read_feather(f'/gscratch/comdata/output/reddit_ngrams/multiword_expressions.feather')
         mwe_dataset = mwe_dataset.sort_values(['phrasePWMI'],ascending=False)
         mwe_phrases = list(mwe_dataset.phrase)
         mwe_phrases = [tuple(s.split(' ')) for s in mwe_phrases]
@@ -87,7 +86,6 @@ def weekly_tf(partition, mwe_pass = 'first'):
             if len(new_token) > 0:
                 new_sentence.append(new_token)
         return new_sentence
-
 
     stopWords = set(stopwords.words('english'))
 
@@ -121,7 +119,7 @@ def weekly_tf(partition, mwe_pass = 'first'):
             for sentence in sentences:
                 if random() <= 0.1:
                     grams = list(chain(*map(lambda i : ngrams(sentence,i),range(4))))
-                    with open(f'/gscratch/comdata/users/nathante/reddit_comment_ngrams_10p_sample/{ngram_output}','a') as gram_file:
+                    with open(f'/gscratch/comdata/output/reddit_ngrams/comment_ngrams_10p_sample/{ngram_output}','a') as gram_file:
                         for ng in grams:
                             gram_file.write(' '.join(ng) + '\n')
                 for token in sentence:
@@ -156,7 +154,7 @@ def weekly_tf(partition, mwe_pass = 'first'):
 
     outchunksize = 10000
 
-    with pq.ParquetWriter(f"/gscratch/comdata/users/nathante/reddit_tfidf_test.parquet_temp/{partition}",schema=schema,compression='snappy',flavor='spark') as writer, pq.ParquetWriter(f"/gscratch/comdata/users/nathante/reddit_tfidf_test_authors.parquet_temp/{partition}",schema=author_schema,compression='snappy',flavor='spark') as author_writer:
+    with pq.ParquetWriter(f"/gscratch/comdata/output/reddit_ngrams/comment_terms.parquet/{partition}",schema=schema,compression='snappy',flavor='spark') as writer, pq.ParquetWriter(f"/gscratch/comdata/output/reddit_ngrams/comment_authors.parquet/{partition}",schema=author_schema,compression='snappy',flavor='spark') as author_writer:
     
         while True:
 

@@ -8,10 +8,32 @@ import pyarrow.dataset as ds
 from scipy.sparse import csr_matrix
 import pandas as pd
 import numpy as np
+import pathlib
 
 class tf_weight(Enum):
     MaxTF = 1
     Norm05 = 2
+
+def read_tfidf_matrix_weekly(path, term_colname, week):
+    term = term_colname
+    term_id = term + '_id'
+    term_id_new = term + '_id_new'
+
+    dataset = ds.dataset(path,format='parquet')
+    entries = dataset.to_table(columns=['tf_idf','subreddit_id_new',term_id_new],filter=ds.field('week')==week).to_pandas()
+    return(csr_matrix((entries.tf_idf,(entries[term_id_new]-1, entries.subreddit_id_new-1))))
+
+def write_weekly_similarities(path, sims, week, names):
+    sims['week'] = week
+    p = pathlib.Path(path)
+    if not p.is_dir():
+        p.mkdir()
+        
+    # reformat as a pairwise list
+    sims = sims.melt(id_vars=['subreddit','week'],value_vars=names.subreddit.values)
+    sims.to_parquet(p / week.isoformat())
+
+
 
 def read_tfidf_matrix(path,term_colname):
     term = term_colname
@@ -28,6 +50,41 @@ def column_similarities(mat):
     sims = mat.T @ mat
     return(sims)
 
+
+def prep_tfidf_entries_weekly(tfidf, term_colname, min_df, included_subreddits):
+    term = term_colname
+    term_id = term + '_id'
+    term_id_new = term + '_id_new'
+
+    if min_df is None:
+        min_df = 0.1 * len(included_subreddits)
+
+    tfidf = tfidf.filter(f.col("subreddit").isin(included_subreddits))
+
+    # we might not have the same terms or subreddits each week, so we need to make unique ids for each week.
+    sub_ids = tfidf.select(['subreddit_id','week']).distinct()
+    sub_ids = sub_ids.withColumn("subreddit_id_new",f.row_number().over(Window.partitionBy('week').orderBy("subreddit_id")))
+    tfidf = tfidf.join(sub_ids,['subreddit_id','week'])
+
+    # only use terms in at least min_df included subreddits in a given week
+    new_count = tfidf.groupBy([term_id,'week']).agg(f.count(term_id).alias('new_count'))
+    tfidf = tfidf.join(new_count,[term_id,'week'],how='inner')
+
+    # reset the term ids
+    term_ids = tfidf.select([term_id,'week']).distinct()
+    term_ids = term_ids.withColumn(term_id_new,f.row_number().over(Window.partitionBy('week').orderBy(term_id)))
+    tfidf = tfidf.join(term_ids,[term_id,'week'])
+
+    tfidf = tfidf.withColumnRenamed("tf_idf","tf_idf_old")
+    tfidf = tfidf.withColumn("tf_idf", (tfidf.relative_tf * tfidf.idf).cast('float'))
+
+    tempdir =TemporaryDirectory(suffix='.parquet',prefix='term_tfidf_entries',dir='.')
+
+    tfidf = tfidf.repartition('week')
+
+    tfidf.write.parquet(tempdir.name,mode='overwrite',compression='snappy')
+    return(tempdir)
+    
 
 def prep_tfidf_entries(tfidf, term_colname, min_df, included_subreddits):
     term = term_colname
@@ -46,7 +103,6 @@ def prep_tfidf_entries(tfidf, term_colname, min_df, included_subreddits):
 
     # only use terms in at least min_df included subreddits
     new_count = tfidf.groupBy(term_id).agg(f.count(term_id).alias('new_count'))
-#    new_count = new_count.filter(f.col('new_count') >= min_df)
     tfidf = tfidf.join(new_count,term_id,how='inner')
     
     # reset the term ids
@@ -55,8 +111,6 @@ def prep_tfidf_entries(tfidf, term_colname, min_df, included_subreddits):
     tfidf = tfidf.join(term_ids,term_id)
 
     tfidf = tfidf.withColumnRenamed("tf_idf","tf_idf_old")
-    # tfidf = tfidf.withColumnRenamed("idf","idf_old")
-    # tfidf = tfidf.withColumn("idf",f.log(25000/f.col("count")))
     tfidf = tfidf.withColumn("tf_idf", (tfidf.relative_tf * tfidf.idf).cast('float'))
     
     tempdir =TemporaryDirectory(suffix='.parquet',prefix='term_tfidf_entries',dir='.')
@@ -64,7 +118,9 @@ def prep_tfidf_entries(tfidf, term_colname, min_df, included_subreddits):
     tfidf.write.parquet(tempdir.name,mode='overwrite',compression='snappy')
     return tempdir
 
-def cosine_similarities(tfidf, term_colname, min_df, included_subreddits, similarity_threshold):
+
+# try computing cosine similarities using spark
+def spark_cosine_similarities(tfidf, term_colname, min_df, included_subreddits, similarity_threshold):
     term = term_colname
     term_id = term + '_id'
     term_id_new = term + '_id_new'
@@ -82,7 +138,6 @@ def cosine_similarities(tfidf, term_colname, min_df, included_subreddits, simila
 
     # only use terms in at least min_df included subreddits
     new_count = tfidf.groupBy(term_id).agg(f.count(term_id).alias('new_count'))
-#    new_count = new_count.filter(f.col('new_count') >= min_df)
     tfidf = tfidf.join(new_count,term_id,how='inner')
     
     # reset the term ids
@@ -91,14 +146,10 @@ def cosine_similarities(tfidf, term_colname, min_df, included_subreddits, simila
     tfidf = tfidf.join(term_ids,term_id)
 
     tfidf = tfidf.withColumnRenamed("tf_idf","tf_idf_old")
-    # tfidf = tfidf.withColumnRenamed("idf","idf_old")
-    # tfidf = tfidf.withColumn("idf",f.log(25000/f.col("count")))
     tfidf = tfidf.withColumn("tf_idf", tfidf.relative_tf * tfidf.idf)
 
     # step 1 make an rdd of entires
     # sorted by (dense) spark subreddit id
-    #    entries = tfidf.filter((f.col('subreddit') == 'asoiaf') | (f.col('subreddit') == 'gameofthrones') | (f.col('subreddit') == 'christianity')).select(f.col("term_id_new")-1,f.col("subreddit_id_new")-1,"tf_idf").rdd
- 
     n_partitions = int(len(included_subreddits)*2 / 5)
 
     entries = tfidf.select(f.col(term_id_new)-1,f.col("subreddit_id_new")-1,"tf_idf").rdd.repartition(n_partitions)
@@ -214,7 +265,6 @@ def build_tfidf_dataset(df, include_subs, term_colname, tf_family=tf_weight.Norm
     df = df.join(idf, on=[term_id, term])
 
     # agg terms by subreddit to make sparse tf/df vectors
-    
     if tf_family == tf_weight.MaxTF:
         df = df.withColumn("tf_idf",  df.relative_tf * df.idf)
     else: # tf_fam = tf_weight.Norm05
@@ -222,4 +272,7 @@ def build_tfidf_dataset(df, include_subs, term_colname, tf_family=tf_weight.Norm
 
     return df
 
-
+def select_topN_subreddits(topN, path="/gscratch/comdata/output/reddit_similarity/subreddits_by_num_comments.csv"):
+    rankdf = pd.read_csv(path)
+    included_subreddits = set(rankdf.loc[rankdf.comments_rank <= topN,'subreddit'].values)
+    return included_subreddits

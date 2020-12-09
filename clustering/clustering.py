@@ -16,6 +16,8 @@ def affinity_clustering(similarities, output, damping=0.5, max_iter=100000, conv
 
     preference = np.quantile(mat,preference_quantile)
 
+    print("data loaded")
+
     clustering = AffinityPropagation(damping=damping,
                                      max_iter=max_iter,
                                      convergence_iter=convergence_iter,
