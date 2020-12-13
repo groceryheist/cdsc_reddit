@@ -45,7 +45,7 @@ def tfidf_terms(outpath='/gscratch/comdata/output/reddit_similarity/tfidf/commen
                  []
                  )
 
-def tfidf_authors_weekly(outpath='/gscratch/comdata/output/reddit_similarity/tfidf/comment_authors.parquet',
+def tfidf_authors_weekly(outpath='/gscratch/comdata/output/reddit_similarity/tfidf_weekly/comment_authors.parquet',
                   topN=25000):
 
     return tfidf_weekly("/gscratch/comdata/output/reddit_ngrams/comment_authors.parquet",
@@ -55,7 +55,7 @@ def tfidf_authors_weekly(outpath='/gscratch/comdata/output/reddit_similarity/tfi
                  ['[deleted]','AutoModerator']
                  )
 
-def tfidf_terms_weekly(outpath='/gscratch/comdata/output/reddit_similarity/tfidf/comment_terms.parquet',
+def tfidf_terms_weekly(outpath='/gscratch/comdata/output/reddit_similarity/tfidf_weekly/comment_terms.parquet',
                 topN=25000):
 
     return tfidf_weekly("/gscratch/comdata/output/reddit_ngrams/comment_terms.parquet",

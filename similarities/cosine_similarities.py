@@ -3,7 +3,7 @@ from pyspark.sql import SparkSession
 import pandas as pd
 import fire
 from pathlib import Path
-from similarities_helper import prep_tfidf_entries, read_tfidf_matrix, select_topN_subreddits
+from similarities_helper import prep_tfidf_entries, read_tfidf_matrix, select_topN_subreddits, column_similarities
 
 
 def cosine_similarities(infile, term_colname, outfile, min_df=None, included_subreddits=None, topN=500, exclude_phrases=False):

@@ -1,12 +1,15 @@
+#!/usr/bin/env python3
+
 import pandas as pd
 import numpy as np
 from sklearn.cluster import AffinityPropagation
 import fire
 
-def affinity_clustering(similarities, output, damping=0.5, max_iter=100000, convergence_iter=30, preference_quantile=0.5, random_state=1968):
+def affinity_clustering(similarities, output, damping=0.9, max_iter=100000, convergence_iter=30, preference_quantile=0.5, random_state=1968, verbose=True):
     '''
     similarities: feather file with a dataframe of similarity scores
     preference_quantile: parameter controlling how many clusters to make. higher values = more clusters. 0.85 is a good value with 3000 subreddits.
+    damping: parameter controlling how iterations are merged. Higher values make convergence faster and more dependable. 0.85 is a good value for the 10000 subreddits by author. 
     '''
 
     df = pd.read_feather(similarities)
@@ -16,6 +19,8 @@ def affinity_clustering(similarities, output, damping=0.5, max_iter=100000, conv
 
     preference = np.quantile(mat,preference_quantile)
 
+    print(f"preference is {preference}")
+
     print("data loaded")
 
     clustering = AffinityPropagation(damping=damping,
@@ -24,6 +29,7 @@ def affinity_clustering(similarities, output, damping=0.5, max_iter=100000, conv
                                      copy=False,
                                      preference=preference,
                                      affinity='precomputed',
+                                     verbose=verbose,
                                      random_state=random_state).fit(mat)
 
 
