@@ -35,7 +35,7 @@ def cosine_similarities_weekly(tfidf_path, outfile, term_colname, min_df = None,
     subreddit_names['subreddit_id_new'] = subreddit_names['subreddit_id_new'] - 1
     spark.stop()
 
-d    weeks = sorted(list(subreddit_names.week.drop_duplicates()))
+    weeks = sorted(list(subreddit_names.week.drop_duplicates()))
     for week in weeks:
         print(f"loading matrix: {week}")
         mat = read_tfidf_matrix_weekly(tempdir.name, term_colname, week)

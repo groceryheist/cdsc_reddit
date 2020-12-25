@@ -2,6 +2,14 @@ import pandas as pd
 from pandas.core.groupby import DataFrameGroupBy as GroupBy
 import fire
 import numpy as np
+import sys
+sys.path.append("..")
+sys.path.append("../similarities")
+from similarities.similarities_helper import read_tfidf_matrix, reindex_tfidf, reindex_tfidf_time_interval
+
+# this is the mean of the ratio of the overlap to the focal size.
+# mean shared membership per focal community member
+# the input is the author tf-idf matrix
 
 def overlap_density(inpath, outpath, agg = pd.DataFrame.sum):
     df = pd.read_feather(inpath)
@@ -19,6 +27,16 @@ def overlap_density_weekly(inpath, outpath, agg = GroupBy.sum):
     res = agg(df.groupby(['subreddit','week'])).reset_index()
     res.to_feather(outpath)
     return res
+
+
+# inpath="/gscratch/comdata/output/reddit_similarity/tfidf/comment_authors.parquet";
+# min_df=1;
+# included_subreddits=None;
+# topN=10000;
+# outpath="/gscratch/comdata/output/reddit_density/wang_overlaps_10000.feather"
+
+# to_date=2019-10-28
+
 
 def author_overlap_density(inpath="/gscratch/comdata/output/reddit_similarity/comment_authors_10000.feather",
                            outpath="/gscratch/comdata/output/reddit_density/comment_authors_10000.feather", agg=pd.DataFrame.sum):
@@ -54,4 +72,5 @@ if __name__ == "__main__":
     fire.Fire({'authors':author_overlap_density,
                'terms':term_overlap_density,
                'author_weekly':author_overlap_density_weekly,
-               'term_weekly':term_overlap_density_weekly})
+               'term_weekly':term_overlap_density_weekly,
+               'wang_overlaps':wang_overlap_density})
