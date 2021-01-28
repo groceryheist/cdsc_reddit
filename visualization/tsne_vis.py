@@ -155,13 +155,13 @@ def build_visualization(tsne_data, clusters, output):
 if __name__ == "__main__":
     fire.Fire(build_visualization)
 
-commenter_data = pd.read_feather("tsne_author_fit.feather")
-clusters = pd.read_feather('author_3000_clusters.feather')
-commenter_data = assign_cluster_colors(commenter_data,clusters,10,8)
-commenter_zoom_plot = zoom_plot(commenter_data)
-commenter_viewport_plot = viewport_plot(commenter_data)
-commenter_zoom_plot.save("subreddit_commenters_tsne_3000.html")
-commenter_viewport_plot.save("subreddit_commenters_tsne_3000_viewport.html")
+# commenter_data = pd.read_feather("tsne_author_fit.feather")
+# clusters = pd.read_feather('author_3000_clusters.feather')
+# commenter_data = assign_cluster_colors(commenter_data,clusters,10,8)
+# commenter_zoom_plot = zoom_plot(commenter_data)
+# commenter_viewport_plot = viewport_plot(commenter_data)
+# commenter_zoom_plot.save("subreddit_commenters_tsne_3000.html")
+# commenter_viewport_plot.save("subreddit_commenters_tsne_3000_viewport.html")
 
 # chart = chart.properties(width=10000,height=10000)
 # chart.save("test_tsne_whole.svg")
