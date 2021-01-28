@@ -16,7 +16,7 @@ def base_plot(plot_data):
 
     subreddit_dropdown = alt.binding_select(options=sorted(plot_data.subreddit))
 
-    cluster_click_select = alt.selection_single(on='click,',fields=['cluster'], bind=cluster_dropdown, name=' ')
+    cluster_click_select = alt.selection_single(on='click',fields=['cluster'], bind=cluster_dropdown, name=' ')
     # cluster_select = alt.selection_single(fields=['cluster'], bind=cluster_dropdown, name='cluster')
     # cluster_select_and = cluster_click_select & cluster_select
     #
