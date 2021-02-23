@@ -58,12 +58,13 @@ def tfidf_authors_weekly(outpath='/gscratch/comdata/output/reddit_similarity/tfi
 def tfidf_terms_weekly(outpath='/gscratch/comdata/output/reddit_similarity/tfidf_weekly/comment_terms.parquet',
                 topN=25000):
 
+
     return tfidf_weekly("/gscratch/comdata/output/reddit_ngrams/comment_terms.parquet",
-                 outpath,
-                 topN,
-                 'term',
-                 []
-                 )
+                        outpath,
+                        topN,
+                        'term',
+                        []
+                        )
 
 
 if __name__ == "__main__":

@@ -14,7 +14,7 @@ def base_plot(plot_data):
 
     cluster_dropdown = alt.binding_select(options=[str(c) for c in sorted(set(plot_data.cluster))])
 
-    subreddit_dropdown = alt.binding_select(options=sorted(plot_data.subreddit))
+    #    subreddit_dropdown = alt.binding_select(options=sorted(plot_data.subreddit))
 
     cluster_click_select = alt.selection_single(on='click',fields=['cluster'], bind=cluster_dropdown, name=' ')
     # cluster_select = alt.selection_single(fields=['cluster'], bind=cluster_dropdown, name='cluster')
@@ -42,7 +42,7 @@ def zoom_plot(plot_data):
     chart = base_plot(plot_data)
 
     chart = chart.interactive()
-    chart = chart.properties(width=1275,height=1000)
+    chart = chart.properties(width=1275,height=800)
 
     return chart
 
@@ -139,10 +139,18 @@ def assign_cluster_colors(tsne_data, clusters, n_colors, n_neighbors = 4):
 
 def build_visualization(tsne_data, clusters, output):
 
+    # tsne_data = "/gscratch/comdata/output/reddit_tsne/subreddit_author_tf_similarities_10000.feather"
+    # clusters = "/gscratch/comdata/output/reddit_clustering/subreddit_author_tf_similarities_10000.feather"
+
     tsne_data = pd.read_feather(tsne_data)
     clusters = pd.read_feather(clusters)
 
     tsne_data = assign_cluster_colors(tsne_data,clusters,10,8)
+
+    # sr_per_cluster = tsne_data.groupby('cluster').subreddit.count().reset_index()
+    # sr_per_cluster = sr_per_cluster.rename(columns={'subreddit':'cluster_size'})
+
+    tsne_data = tsne_data.merge(sr_per_cluster,on='cluster')
 
     term_zoom_plot = zoom_plot(tsne_data)
 

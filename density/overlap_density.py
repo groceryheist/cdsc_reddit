@@ -5,7 +5,7 @@ import numpy as np
 import sys
 sys.path.append("..")
 sys.path.append("../similarities")
-from similarities.similarities_helper import read_tfidf_matrix, reindex_tfidf, reindex_tfidf_time_interval
+from similarities.similarities_helper import reindex_tfidf, reindex_tfidf_time_interval
 
 # this is the mean of the ratio of the overlap to the focal size.
 # mean shared membership per focal community member
@@ -72,5 +72,5 @@ if __name__ == "__main__":
     fire.Fire({'authors':author_overlap_density,
                'terms':term_overlap_density,
                'author_weekly':author_overlap_density_weekly,
-               'term_weekly':term_overlap_density_weekly,
-               'wang_overlaps':wang_overlap_density})
+               'term_weekly':term_overlap_density_weekly})
+

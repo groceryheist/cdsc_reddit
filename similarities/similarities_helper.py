@@ -75,17 +75,20 @@ def reindex_tfidf(infile, term_colname, min_df=None, max_df=None, included_subre
     spark.stop()
     return (tempdir, subreddit_names)
 
-def similarities(infile, simfunc, term_colname, outfile, min_df=None, max_df=None, included_subreddits=None, topN=500, exclude_phrases=False, from_date=None, to_date=None):
 
+def similarities(infile, simfunc, term_colname, outfile, min_df=None, max_df=None, included_subreddits=None, topN=500, exclude_phrases=False, from_date=None, to_date=None, tfidf_colname='tf_idf'):
+    '''
+    tfidf_colname: set to 'relative_tf' to use normalized term frequency instead of tf-idf, which can be useful for author-based similarities.
+    '''
     if from_date is not None or to_date is not None:
-        tempdir, subreddit_names = reindex_tfidf_time_interval(infile, term_colname='author', min_df=min_df, max_df=max_df, included_subreddits=included_subreddits, topN=topN, exclude_phrases=False, from_date=from_date, to_date=to_date)
+        tempdir, subreddit_names = reindex_tfidf_time_interval(infile, term_colname=term_colname, min_df=min_df, max_df=max_df, included_subreddits=included_subreddits, topN=topN, exclude_phrases=False, from_date=from_date, to_date=to_date)
         
     else:
-        tempdir, subreddit_names = reindex_tfidf(infile, term_colname='author', min_df=min_df, max_df=max_df, included_subreddits=included_subreddits, topN=topN, exclude_phrases=False)
+        tempdir, subreddit_names = reindex_tfidf(infile, term_colname=term_colname, min_df=min_df, max_df=max_df, included_subreddits=included_subreddits, topN=topN, exclude_phrases=False)
 
     print("loading matrix")
     #    mat = read_tfidf_matrix("term_tfidf_entries7ejhvnvl.parquet", term_colname)
-    mat = read_tfidf_matrix(tempdir.name, term_colname)
+    mat = read_tfidf_matrix(tempdir.name, term_colname, tfidf_colname)
     print('computing similarities')
     sims = simfunc(mat)
     del mat
@@ -108,14 +111,24 @@ def similarities(infile, simfunc, term_colname, outfile, min_df=None, max_df=Non
     sims.to_feather(outfile)
     tempdir.cleanup()
 
-def read_tfidf_matrix_weekly(path, term_colname, week):
+def read_tfidf_matrix_weekly(path, term_colname, week, tfidf_colname='tf_idf'):
     term = term_colname
     term_id = term + '_id'
     term_id_new = term + '_id_new'
 
     dataset = ds.dataset(path,format='parquet')
-    entries = dataset.to_table(columns=['tf_idf','subreddit_id_new',term_id_new],filter=ds.field('week')==week).to_pandas()
-    return(csr_matrix((entries.tf_idf,(entries[term_id_new]-1, entries.subreddit_id_new-1))))
+    entries = dataset.to_table(columns=[tfidf_colname,'subreddit_id_new', term_id_new],filter=ds.field('week')==week).to_pandas()
+    return(csr_matrix((entries[tfidf_colname], (entries[term_id_new]-1, entries.subreddit_id_new-1))))
+
+def read_tfidf_matrix(path, term_colname, tfidf_colname='tf_idf'):
+    term = term_colname
+    term_id = term + '_id'
+    term_id_new = term + '_id_new'
+    dataset = ds.dataset(path,format='parquet')
+    print(f"tfidf_colname:{tfidf_colname}")
+    entries = dataset.to_table(columns=[tfidf_colname, 'subreddit_id_new',term_id_new]).to_pandas()
+    return(csr_matrix((entries[tfidf_colname],(entries[term_id_new]-1, entries.subreddit_id_new-1))))
+    
 
 def write_weekly_similarities(path, sims, week, names):
     sims['week'] = week
@@ -127,15 +140,6 @@ def write_weekly_similarities(path, sims, week, names):
     sims = sims.melt(id_vars=['subreddit','week'],value_vars=names.subreddit.values)
     sims.to_parquet(p / week.isoformat())
 
-def read_tfidf_matrix(path,term_colname):
-    term = term_colname
-    term_id = term + '_id'
-    term_id_new = term + '_id_new'
-
-    dataset = ds.dataset(path,format='parquet')
-    entries = dataset.to_table(columns=['tf_idf','subreddit_id_new',term_id_new]).to_pandas()
-    return(csr_matrix((entries.tf_idf,(entries[term_id_new]-1, entries.subreddit_id_new-1))))
-    
 def column_overlaps(mat):
     non_zeros = (mat != 0).astype('double')
     
@@ -383,7 +387,7 @@ def build_tfidf_dataset(df, include_subs, term_colname, tf_family=tf_weight.Norm
 
     return df
 
-def select_topN_subreddits(topN, path="/gscratch/comdata/output/reddit_similarity/subreddits_by_num_comments.csv"):
+def select_topN_subreddits(topN, path="/gscratch/comdata/output/reddit_similarity/subreddits_by_num_comments_nonswf.csv"):
     rankdf = pd.read_csv(path)
     included_subreddits = set(rankdf.loc[rankdf.comments_rank <= topN,'subreddit'].values)
     return included_subreddits

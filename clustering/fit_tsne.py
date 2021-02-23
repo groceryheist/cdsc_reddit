@@ -5,7 +5,7 @@ from numpy import random
 import numpy as np
 from sklearn.manifold import TSNE
 
-similarities = "term_similarities_10000.feather"
+similarities = "/gscratch/comdata/output/reddit_similarity/subreddit_author_tf_similarities_10000.parquet"
 
 def fit_tsne(similarities, output, learning_rate=750, perplexity=50, n_iter=10000, early_exaggeration=20):
     '''
