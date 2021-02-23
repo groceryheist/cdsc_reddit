@@ -18,7 +18,8 @@ def term_cosine_similarities(outfile, min_df=None, max_df=None, included_subredd
                                topN,
                                exclude_phrases,
                                from_date,
-                               to_date)
+                               to_date
+                               )
 
 def author_cosine_similarities(outfile, min_df=2, max_df=None, included_subreddits=None, topN=10000, from_date=None, to_date=None):
     return cosine_similarities('/gscratch/comdata/output/reddit_similarity/tfidf/comment_authors.parquet',
@@ -30,7 +31,8 @@ def author_cosine_similarities(outfile, min_df=2, max_df=None, included_subreddi
                                topN,
                                exclude_phrases=False,
                                from_date=from_date,
-                               to_date=to_date)
+                               to_date=to_date
+                               )
 
 def author_tf_similarities(outfile, min_df=2, max_df=None, included_subreddits=None, topN=10000, from_date=None, to_date=None):
     return cosine_similarities('/gscratch/comdata/output/reddit_similarity/tfidf/comment_authors.parquet',
@@ -43,7 +45,8 @@ def author_tf_similarities(outfile, min_df=2, max_df=None, included_subreddits=N
                                exclude_phrases=False,
                                from_date=from_date,
                                to_date=to_date,
-                               tfidf_colname='relative_tf')
+                               tfidf_colname='relative_tf'
+                               )
 
 
 if __name__ == "__main__":
