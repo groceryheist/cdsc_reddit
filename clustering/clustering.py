@@ -14,8 +14,9 @@ def affinity_clustering(similarities, output, damping=0.9, max_iter=100000, conv
 
     df = pd.read_feather(similarities)
     n = df.shape[0]
-    mat = np.array(df.drop('subreddit',1))
+    mat = np.array(df.drop('_subreddit',1))
     mat[range(n),range(n)] = 1
+    assert(all(np.diag(mat)==1))
 
     preference = np.quantile(mat,preference_quantile)
 

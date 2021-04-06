@@ -8,7 +8,22 @@ import fire
 from itertools import islice
 from pathlib import Path
 from similarities_helper import *
+from multiprocessing import pool
 
+def _week_similarities(tempdir, term_colname, week):
+        print(f"loading matrix: {week}")
+        mat = read_tfidf_matrix_weekly(tempdir.name, term_colname, week)
+        print('computing similarities')
+        sims = column_similarities(mat)
+        del mat
+
+        names = subreddit_names.loc[subreddit_names.week == week]
+        sims = pd.DataFrame(sims.todense())
+
+        sims = sims.rename({i: sr for i, sr in enumerate(names.subreddit.values)}, axis=1)
+        sims['_subreddit'] = names.subreddit.values
+
+        write_weekly_similarities(outfile, sims, week, names)
 
 #tfidf = spark.read.parquet('/gscratch/comdata/users/nathante/subreddit_tfidf_weekly.parquet')
 def cosine_similarities_weekly(tfidf_path, outfile, term_colname, min_df = None, included_subreddits = None, topN = 500):
@@ -36,24 +51,17 @@ def cosine_similarities_weekly(tfidf_path, outfile, term_colname, min_df = None,
     spark.stop()
 
     weeks = sorted(list(subreddit_names.week.drop_duplicates()))
-    for week in weeks:
-        print(f"loading matrix: {week}")
-        mat = read_tfidf_matrix_weekly(tempdir.name, term_colname, week)
-        print('computing similarities')
-        sims = column_similarities(mat)
-        del mat
+    # do this step in parallel if we have the memory for it.
+    # should be doable with pool.map
 
-        names = subreddit_names.loc[subreddit_names.week == week]
-        sims = pd.DataFrame(sims.todense())
+    def week_similarities_helper(week):
+        _week_similarities(tempdir, term_colname, week)
 
-        sims = sims.rename({i: sr for i, sr in enumerate(names.subreddit.values)}, axis=1)
-        sims['subreddit'] = names.subreddit.values
+    with Pool(40) as pool: # maybe it can be done with 40 cores on the huge machine?
+        list(pool.map(weeks,week_similarities_helper))
 
-        write_weekly_similarities(outfile, sims, week, names)
-
-
-def author_cosine_similarities_weekly(outfile, min_df=None , included_subreddits=None, topN=500):
-    return cosine_similarities_weekly('/gscratch/comdata/output/reddit_similarity/tfidf_weekly/comment_authors.parquet',
+def author_cosine_similarities_weekly(outfile, min_df=2 , included_subreddits=None, topN=500):
+    return cosine_similarities_weekly('/gscratch/comdata/output/reddit_similarity/tfidf_weekly/comment_authors_100k.parquet',
                                       outfile,
                                       'author',
                                       min_df,
@@ -61,7 +69,7 @@ def author_cosine_similarities_weekly(outfile, min_df=None , included_subreddits
                                       topN)
 
 def term_cosine_similarities_weekly(outfile, min_df=None, included_subreddits=None, topN=500):
-    return cosine_similarities_weekly('/gscratch/comdata/output/reddit_similarity/tfidf_weekly/comment_terms.parquet',
+    return cosine_similarities_weekly('/gscratch/comdata/output/reddit_similarity/tfidf_weekly/comment_terms_100k.parquet',
                                       outfile,
                                       'term',
                                       min_df,
@@ -69,5 +77,5 @@ def term_cosine_similarities_weekly(outfile, min_df=None, included_subreddits=No
                                       topN)
 
 if __name__ == "__main__":
-    fire.Fire({'author':author_cosine_similarities_weekly,
-               'term':term_cosine_similarities_weekly})
+    fire.Fire({'authors':author_cosine_similarities_weekly,
+               'terms':term_cosine_similarities_weekly})

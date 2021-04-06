@@ -89,7 +89,8 @@ def similarities(infile, simfunc, term_colname, outfile, min_df=None, max_df=Non
     print("loading matrix")
     #    mat = read_tfidf_matrix("term_tfidf_entries7ejhvnvl.parquet", term_colname)
     mat = read_tfidf_matrix(tempdir.name, term_colname, tfidf_colname)
-    print('computing similarities')
+    print(f'computing similarities on mat. mat.shape:{mat.shape}')
+    print(f"size of mat is:{mat.data.nbytes}")
     sims = simfunc(mat)
     del mat
 
@@ -387,7 +388,7 @@ def build_tfidf_dataset(df, include_subs, term_colname, tf_family=tf_weight.Norm
 
     return df
 
-def select_topN_subreddits(topN, path="/gscratch/comdata/output/reddit_similarity/subreddits_by_num_comments_nonswf.csv"):
+def select_topN_subreddits(topN, path="/gscratch/comdata/output/reddit_similarity/subreddits_by_num_comments_nonsfw.csv"):
     rankdf = pd.read_csv(path)
     included_subreddits = set(rankdf.loc[rankdf.comments_rank <= topN,'subreddit'].values)
     return included_subreddits

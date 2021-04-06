@@ -24,8 +24,8 @@ def _tfidf_wrapper(func, inpath, outpath, topN, term_colname, exclude, included_
 def tfidf(inpath, outpath, topN, term_colname, exclude, included_subreddits):
     return _tfidf_wrapper(build_tfidf_dataset, inpath, outpath, topN, term_colname, exclude, included_subreddits)
 
-def tfidf_weekly(inpath, outpath, topN, term_colname, exclude):
-    return _tfidf_wrapper(build_weekly_tfidf_dataset, inpath, outpath, topN, term_colname, included_subreddits)
+def tfidf_weekly(inpath, outpath, topN, term_colname, exclude, included_subreddits):
+    return _tfidf_wrapper(build_weekly_tfidf_dataset, inpath, outpath, topN, term_colname, exclude, included_subreddits)
 
 def tfidf_authors(outpath='/gscratch/comdata/output/reddit_similarity/tfidf/comment_authors.parquet',
                   topN=25000):
