@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from multiprocessing  import Pool, cpu_count, Array, Process
 from pathlib import Path
 from itertools import product, starmap
+import numpy as np
 import pandas as pd
 import fire
 import sys
@@ -23,16 +24,28 @@ class clustering_result:
     alt_silhouette_score:float
     name:str
 
-def do_clustering(damping, convergence_iter, preference_quantile, name, mat, subreddits,  max_iter,  outdir:Path, random_state, verbose, alt_mat):
+
+def sim_to_dist(mat):
+    dist = 1-mat
+    dist[dist < 0] = 0
+    np.fill_diagonal(dist,0)
+    return dist
+
+def do_clustering(damping, convergence_iter, preference_quantile, name, mat, subreddits,  max_iter,  outdir:Path, random_state, verbose, alt_mat, overwrite=False):
     if name is None:
-        name = f"damping-{damping}_convergenceIter-{convergence_iter}_preferenceQuantile-{convergence_iter}"
+        name = f"damping-{damping}_convergenceIter-{convergence_iter}_preferenceQuantile-{preference_quantile}"
     print(name)
     sys.stdout.flush()
     outpath = outdir / (str(name) + ".feather")
     print(outpath)
     clustering = _affinity_clustering(mat, subreddits, outpath, damping, max_iter, convergence_iter, preference_quantile, random_state, verbose)
-    score = silhouette_score(clustering.affinity_matrix_, clustering.labels_, metric='precomputed')
-    alt_score = silhouette_score(alt_mat, clustering.labels_, metric='precomputed')
+    mat = sim_to_dist(clustering.affinity_matrix_)
+
+    score = silhouette_score(mat, clustering.labels_, metric='precomputed')
+
+    if alt_mat is not None:
+        alt_distances = sim_to_dist(alt_mat)
+        alt_score = silhouette_score(alt_mat, clustering.labels_, metric='precomputed')
     
     res = clustering_result(outpath=outpath,
                             damping=damping,
@@ -47,7 +60,7 @@ def do_clustering(damping, convergence_iter, preference_quantile, name, mat, sub
 
 # alt similiarities is for checking the silhouette coefficient of an alternative measure of similarity (e.g., topic similarities for user clustering).
 
-def select_affinity_clustering(similarities, outdir, damping=[0.9], max_iter=100000, convergence_iter=[30], preference_quantile=[0.5], random_state=1968, verbose=True, alt_similarities=None, J=None):
+def select_affinity_clustering(similarities, outdir, outinfo, damping=[0.9], max_iter=100000, convergence_iter=[30], preference_quantile=[0.5], random_state=1968, verbose=True, alt_similarities=None, J=None):
 
     damping = list(map(float,damping))
     convergence_iter = convergence_iter = list(map(int,convergence_iter))
@@ -80,8 +93,9 @@ def select_affinity_clustering(similarities, outdir, damping=[0.9], max_iter=100
     print("running clustering selection")
     clustering_data = pool.starmap(_do_clustering, hyper_grid)
     clustering_data = pd.DataFrame(list(clustering_data))
+    clustering_data.to_csv(outinfo)
+    
     return clustering_data
 
-
 if __name__ == "__main__":
-    fire.Fire(select_affinity_clustering)
+    x = fire.Fire(select_affinity_clustering)

@@ -2,26 +2,29 @@
 srun_singularity=source /gscratch/comdata/users/nathante/cdsc_reddit/bin/activate && srun_singularity.sh
 similarity_data=/gscratch/comdata/output/reddit_similarity
 clustering_data=/gscratch/comdata/output/reddit_clustering
-selection_grid="--max_iter=10000 --convergence_iter=15,30,100 --preference_quantile=0.85 --damping=0.5,0.6,0.7,0.8,0.85,0.9,0.95,0.97,0.99, --preference_quantile=0.1,0.3,0.5,0.7,0.9"
-all:$(clustering_data)/subreddit_comment_authors_30k.feather $(clustering_data)/subreddit_authors-tf_similarities_30k.feather $(clustering_data)/subreddit_comment_authors_10k.feather $(clustering_data)/subreddit_authors-tf_similarities_10k.feather $(clustering_data)/subreddit_comment_terms_30k.feather $(clustering_data)/subreddit_comment_terms_10k.feather
+selection_grid="--max_iter=3000 --convergence_iter=15,30,100 --damping=0.5,0.6,0.7,0.8,0.85,0.9,0.95,0.97,0.99, --preference_quantile=0.1,0.3,0.5,0.7,0.9"
+#selection_grid="--max_iter=3000 --convergence_iter=[15] --preference_quantile=[0.5] --damping=[0.99]"
+all:$(clustering_data)/subreddit_comment_authors_10k/selection_data.csv $(clustering_data)/subreddit_comment_authors-tf_10k/selection_data.csv $(clustering_data)/subreddit_comment_terms_10k/selection_data.csv
+# $(clustering_data)/subreddit_comment_authors_30k.feather/SUCCESS $(clustering_data)/subreddit_authors-tf_similarities_30k.feather/SUCCESS
+# $(clustering_data)/subreddit_comment_terms_30k.feather/SUCCESS
 
-$(clustering_data)/subreddit_comment_authors_10k.feather:selection.py $(similarity_data)/subreddit_comment_authors_10k.feather clustering.py
-	$(srun_singularity) python3 selection.py $(similarity_data)/subreddit_comment_authors_10k.feather $(clustering_data)/subreddit_comment_authors_10k $(selection_grid) -J 20
+$(clustering_data)/subreddit_comment_authors_10k/selection_data.csv:selection.py $(similarity_data)/subreddit_comment_authors_10k.feather clustering.py
+	$(srun_singularity) python3 selection.py $(similarity_data)/subreddit_comment_authors_10k.feather $(clustering_data)/subreddit_comment_authors_10k $(clustering_data)/subreddit_comment_authors_10k/selection_data.csv $(selection_grid) -J 20
 
-$(clustering_data)/subreddit_comment_terms_10k.feather:selection.py $(similarity_data)/subreddit_comment_terms_10k.feather clustering.py
-	$(srun_singularity) python3 selection.py $(similarity_data)/subreddit_comment_terms_10k.feather $(clustering_data)/subreddit_comment_terms_10k $(selection_grid) -J 20
+$(clustering_data)/subreddit_comment_terms_10k/selection_data.csv:selection.py $(similarity_data)/subreddit_comment_terms_10k.feather clustering.py
+	$(srun_singularity) python3 selection.py $(similarity_data)/subreddit_comment_terms_10k.feather $(clustering_data)/subreddit_comment_terms_10k  $(clustering_data)/subreddit_comment_terms_10k/selection_data.csv $(selection_grid) -J 20 
 
-$(clustering_data)/subreddit_authors-tf_similarities_10k.feather:clustering.py $(similarity_data)/subreddit_comment_authors-tf_10k.feather
-	$(srun_singularity) python3 selection.py $(similarity_data)/subreddit_comment_authors-tf_10k.feather $(clustering_data)/subreddit_comment_authors-tf_10k $(selection_grid) -J 20
+$(clustering_data)/subreddit_comment_authors-tf_10k/selection_data.csv:clustering.py $(similarity_data)/subreddit_comment_authors-tf_10k.feather
+	$(srun_singularity) python3 selection.py $(similarity_data)/subreddit_comment_authors-tf_10k.feather $(clustering_data)/subreddit_comment_authors-tf_10k  $(clustering_data)/subreddit_comment_authors-tf_10k/selection_data.csv $(selection_grid) -J 20
 
-$(clustering_data)/subreddit_comment_authors_30k.feather:selection.py $(similarity_data)/subreddit_comment_authors_30k.feather clustering.py
-	$(srun_singularity) python3 selection.py $(similarity_data)/subreddit_comment_authors_30k.feather $(clustering_data)/subreddit_comment_authors_30k $(selection_grid) -J 10
+# $(clustering_data)/subreddit_comment_authors_30k.feather/SUCCESS:selection.py $(similarity_data)/subreddit_comment_authors_30k.feather clustering.py
+# 	$(srun_singularity) python3 selection.py $(similarity_data)/subreddit_comment_authors_30k.feather $(clustering_data)/subreddit_comment_authors_30k $(selection_grid) -J 10 && touch $(clustering_data)/subreddit_comment_authors_30k.feather/SUCCESS
 
-$(clustering_data)/subreddit_comment_terms_30k.feather:selection.py $(similarity_data)/subreddit_comment_terms_30k.feather clustering.py
-	$(srun_singularity) python3 selection.py $(similarity_data)/subreddit_comment_terms_30k.feather $(clustering_data)/subreddit_comment_terms_30k $(selection_grid) -J 10
+# $(clustering_data)/subreddit_comment_terms_30k.feather/SUCCESS:selection.py $(similarity_data)/subreddit_comment_terms_30k.feather clustering.py
+# 	$(srun_singularity) python3 selection.py $(similarity_data)/subreddit_comment_terms_30k.feather $(clustering_data)/subreddit_comment_terms_30k $(selection_grid) -J 10 && touch $(clustering_data)/subreddit_comment_terms_30k.feather/SUCCESS
 
-$(clustering_data)/subreddit_authors-tf_similarities_30k.feather:clustering.py $(similarity_data)/subreddit_comment_authors-tf_30k.feather
-	$(srun_singularity) python3 selection.py $(similarity_data)/subreddit_comment_authors-tf_30k.feather $(clustering_data)/subreddit_comment_authors-tf_30k $(selection_grid) -J 8
+# $(clustering_data)/subreddit_authors-tf_similarities_30k.feather/SUCCESS:clustering.py $(similarity_data)/subreddit_comment_authors-tf_30k.feather
+# 	$(srun_singularity) python3 selection.py $(similarity_data)/subreddit_comment_authors-tf_30k.feather $(clustering_data)/subreddit_comment_authors-tf_30k $(selection_grid) -J 8 && touch $(clustering_data)/subreddit_authors-tf_similarities_30k.feather/SUCCESS
 
 
 # $(clustering_data)/subreddit_comment_authors_100k.feather:clustering.py $(similarity_data)/subreddit_comment_authors_100k.feather

@@ -24,7 +24,7 @@ def _affinity_clustering(mat, subreddits, output, damping=0.9, max_iter=100000, 
     preference_quantile: parameter controlling how many clusters to make. higher values = more clusters. 0.85 is a good value with 3000 subreddits.
     damping: parameter controlling how iterations are merged. Higher values make convergence faster and more dependable. 0.85 is a good value for the 10000 subreddits by author. 
     '''
-    print(f"damping:{damping}; convergenceIter:{convergence_iter}; preferenceQuantile:{preference_quantilne}")
+    print(f"damping:{damping}; convergenceIter:{convergence_iter}; preferenceQuantile:{preference_quantile}")
 
     preference = np.quantile(mat,preference_quantile)
 
