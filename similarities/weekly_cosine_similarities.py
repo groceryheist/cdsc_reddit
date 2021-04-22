@@ -61,7 +61,7 @@ def cosine_similarities_weekly(tfidf_path, outfile, term_colname, min_df = None,
         list(pool.map(weeks,week_similarities_helper))
 
 def author_cosine_similarities_weekly(outfile, min_df=2 , included_subreddits=None, topN=500):
-    return cosine_similarities_weekly('/gscratch/comdata/output/reddit_similarity/tfidf_weekly/comment_authors_100k.parquet',
+    return cosine_similarities_weekly('/gscratch/comdata/output/reddit_similarity/tfidf_weekly/comment_authors_30k.parquet',
                                       outfile,
                                       'author',
                                       min_df,
@@ -69,7 +69,7 @@ def author_cosine_similarities_weekly(outfile, min_df=2 , included_subreddits=No
                                       topN)
 
 def term_cosine_similarities_weekly(outfile, min_df=None, included_subreddits=None, topN=500):
-    return cosine_similarities_weekly('/gscratch/comdata/output/reddit_similarity/tfidf_weekly/comment_terms_100k.parquet',
+    return cosine_similarities_weekly('/gscratch/comdata/output/reddit_similarity/tfidf_weekly/comment_terms_30k.parquet',
                                       outfile,
                                       'term',
                                       min_df,
