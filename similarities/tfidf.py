@@ -11,7 +11,7 @@ def _tfidf_wrapper(func, inpath, outpath, topN, term_colname, exclude, included_
     df = df.filter(~ f.col(term_colname).isin(exclude))
 
     if included_subreddits is not None:
-        include_subs = list(open(included_subreddits))
+        include_subs = set(map(str.strip,map(str.lower, open(included_subreddits))))
     else:
         include_subs = select_topN_subreddits(topN)
 
@@ -28,40 +28,44 @@ def tfidf_weekly(inpath, outpath, topN, term_colname, exclude, included_subreddi
     return _tfidf_wrapper(build_weekly_tfidf_dataset, inpath, outpath, topN, term_colname, exclude, included_subreddits)
 
 def tfidf_authors(outpath='/gscratch/comdata/output/reddit_similarity/tfidf/comment_authors.parquet',
-                  topN=25000):
+                  topN=25000,
+                  included_subreddits=None):
 
     return tfidf("/gscratch/comdata/output/reddit_ngrams/comment_authors.parquet",
                  outpath,
                  topN,
                  'author',
                  ['[deleted]','AutoModerator'],
-                 included_subreddits=None
+                 included_subreddits=included_subreddits
                  )
 
 def tfidf_terms(outpath='/gscratch/comdata/output/reddit_similarity/tfidf/comment_terms.parquet',
-                topN=25000):
+                topN=25000,
+                included_subreddits=None):
 
     return tfidf("/gscratch/comdata/output/reddit_ngrams/comment_terms.parquet",
                  outpath,
                  topN,
                  'term',
                  [],
-                 included_subreddits=None
+                 included_subreddits=included_subreddits
                  )
 
 def tfidf_authors_weekly(outpath='/gscratch/comdata/output/reddit_similarity/tfidf_weekly/comment_authors.parquet',
-                         topN=25000):
+                         topN=25000,
+                         included_subreddits=None):
 
     return tfidf_weekly("/gscratch/comdata/output/reddit_ngrams/comment_authors.parquet",
                         outpath,
                         topN,
                         'author',
                         ['[deleted]','AutoModerator'],
-                        included_subreddits=None
+                        included_subreddits=included_subreddits
                         )
 
 def tfidf_terms_weekly(outpath='/gscratch/comdata/output/reddit_similarity/tfidf_weekly/comment_terms.parquet',
-                       topN=25000):
+                       topN=25000,
+                       included_subreddits=None):
 
 
     return tfidf_weekly("/gscratch/comdata/output/reddit_ngrams/comment_terms.parquet",
@@ -69,7 +73,7 @@ def tfidf_terms_weekly(outpath='/gscratch/comdata/output/reddit_similarity/tfidf
                         topN,
                         'term',
                         [],
-                        included_subreddits=None
+                        included_subreddits=included_subreddits
                         )
 
 
