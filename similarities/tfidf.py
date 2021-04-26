@@ -17,7 +17,7 @@ def _tfidf_wrapper(func, inpath, outpath, topN, term_colname, exclude, included_
 
     df = func(df, include_subs, term_colname)
 
-    df.write.parquet(outpath,mode='overwrite',compression='snappy')
+    df.write.parquet(outpath,mode='overwrite',copmression='snappy')
 
     spark.stop()
 
