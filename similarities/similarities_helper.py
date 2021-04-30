@@ -6,7 +6,9 @@ from pyspark.mllib.linalg.distributed import CoordinateMatrix
 from tempfile import TemporaryDirectory
 import pyarrow
 import pyarrow.dataset as ds
+from sklearn.metrics import pairwise_distances
 from scipy.sparse import csr_matrix, issparse
+from sklearn.decomposition import TruncatedSVD
 import pandas as pd
 import numpy as np
 import pathlib
@@ -17,7 +19,8 @@ class tf_weight(Enum):
     MaxTF = 1
     Norm05 = 2
 
-infile = "/gscratch/comdata/output/reddit_similarity/tfidf_weekly/comment_authors.parquet"
+infile = "/gscratch/comdata/output/reddit_similarity/tfidf/comment_authors_100k.parquet"
+cache_file = "/gscratch/comdata/users/nathante/cdsc_reddit/similarities/term_tfidf_entries_bak.parquet"
 
 def reindex_tfidf_time_interval(infile, term_colname, min_df=None, max_df=None, included_subreddits=None, topN=500, exclude_phrases=False, from_date=None, to_date=None):
     term = term_colname
@@ -50,30 +53,57 @@ def reindex_tfidf_time_interval(infile, term_colname, min_df=None, max_df=None, 
     subreddit_names['subreddit_id_new'] = subreddit_names['subreddit_id_new'] - 1
     return(tempdir, subreddit_names)
 
-def reindex_tfidf(infile, term_colname, min_df=None, max_df=None, included_subreddits=None, topN=500, exclude_phrases=False):
+# subreddits missing after this step don't have any terms that have a high enough idf
+def reindex_tfidf(infile, term_colname, min_df=None, max_df=None, included_subreddits=None, topN=500,  tf_family=tf_weight.MaxTF):
     spark = SparkSession.builder.getOrCreate()
     conf = spark.sparkContext.getConf()
     print(exclude_phrases)
 
-    tfidf = spark.read.parquet(infile)
+    tfidf_ds = ds.dataset(infile)
 
     if included_subreddits is None:
         included_subreddits = select_topN_subreddits(topN)
     else:
         included_subreddits = set(open(included_subreddits))
 
-    if exclude_phrases == True:
-        tfidf = tfidf.filter(~f.col(term_colname).contains("_"))
+    ds_filter = ds.field("subreddit").isin(included_subreddits)
 
-    print("creating temporary parquet with matrix indicies")
-    tempdir = prep_tfidf_entries(tfidf, term_colname, min_df, max_df, included_subreddits)
+    if min_df is not None:
+        ds_filter &= ds.field("count") >= min_df
 
-    tfidf = spark.read.parquet(tempdir.name)
-    subreddit_names = tfidf.select(['subreddit','subreddit_id_new']).distinct().toPandas()
+    if max_df is not None:
+        ds_filter &= ds.field("count") <= max_df
+
+    term = term_colname
+    term_id = term + '_id'
+    term_id_new = term + '_id_new'
+
+    df = tfidf_ds.to_table(filter=ds_filter,columns=['subreddit','subreddit_id',term_id,'relative_tf']).to_pandas()
+
+    sub_ids = df.subreddit_id.drop_duplicates()
+    new_sub_ids = pd.DataFrame({'subreddit_id':old,'subreddit_id_new':new} for new, old in enumerate(sorted(sub_ids)))
+    df = df.merge(new_sub_ids,on='subreddit_id',how='inner',validate='many_to_one')
+
+    new_count = df.groupby(term_id)[term_id].aggregate(new_count='count').reset_index()
+    df = df.merge(new_count,on=term_id,how='inner',validate='many_to_one')
+
+    term_ids = df[term_id].drop_duplicates()
+    new_term_ids = pd.DataFrame({term_id:old,term_id_new:new} for new, old in enumerate(sorted(term_ids)))
+
+    df = df.merge(new_term_ids, on=term_id, validate='many_to_one')
+    N_docs = sub_ids.shape[0]
+
+    df['idf'] = np.log(N_docs/(1+df.new_count)) + 1
+
+    # agg terms by subreddit to make sparse tf/df vectors
+    if tf_family == tf_weight.MaxTF:
+        df["tf_idf"] = df.relative_tf * df.idf
+    else: # tf_fam = tf_weight.Norm05
+        df["tf_idf"] = (0.5 + 0.5 * df.relative_tf) * df.idf
+
+    subreddit_names = df.loc[:,['subreddit','subreddit_id_new']].drop_duplicates()
     subreddit_names = subreddit_names.sort_values("subreddit_id_new")
-    subreddit_names['subreddit_id_new'] = subreddit_names['subreddit_id_new'] - 1
-    spark.stop()
-    return (tempdir, subreddit_names)
+    return(df, subreddit_names)
 
 
 def similarities(infile, simfunc, term_colname, outfile, min_df=None, max_df=None, included_subreddits=None, topN=500, exclude_phrases=False, from_date=None, to_date=None, tfidf_colname='tf_idf'):
@@ -82,13 +112,15 @@ def similarities(infile, simfunc, term_colname, outfile, min_df=None, max_df=Non
     '''
     if from_date is not None or to_date is not None:
         tempdir, subreddit_names = reindex_tfidf_time_interval(infile, term_colname=term_colname, min_df=min_df, max_df=max_df, included_subreddits=included_subreddits, topN=topN, exclude_phrases=False, from_date=from_date, to_date=to_date)
-        
+        mat = read_tfidf_matrix(tempdir.name, term_colname, tfidf_colname)        
     else:
-        tempdir, subreddit_names = reindex_tfidf(infile, term_colname=term_colname, min_df=min_df, max_df=max_df, included_subreddits=included_subreddits, topN=topN, exclude_phrases=False)
+        entries, subreddit_names = reindex_tfidf(infile, term_colname=term_colname, min_df=min_df, max_df=max_df, included_subreddits=included_subreddits, topN=topN, exclude_phrases=False)
+        mat = csr_matrix((entries[tfidf_colname],(entries[term_id_new]-1, entries.subreddit_id_new-1)))
 
-    print("loading matrix")
+    print("loading matrix")        
+
     #    mat = read_tfidf_matrix("term_tfidf_entries7ejhvnvl.parquet", term_colname)
-    mat = read_tfidf_matrix(tempdir.name, term_colname, tfidf_colname)
+
     print(f'computing similarities on mat. mat.shape:{mat.shape}')
     print(f"size of mat is:{mat.data.nbytes}")
     sims = simfunc(mat)
@@ -101,7 +133,7 @@ def similarities(infile, simfunc, term_colname, outfile, min_df=None, max_df=Non
     print(f"len(subreddit_names.subreddit.values):{len(subreddit_names.subreddit.values)}")
     sims = pd.DataFrame(sims)
     sims = sims.rename({i:sr for i, sr in enumerate(subreddit_names.subreddit.values)}, axis=1)
-    sims['subreddit'] = subreddit_names.subreddit.values
+    sims['_subreddit'] = subreddit_names.subreddit.values
 
     p = Path(outfile)
 
@@ -110,7 +142,7 @@ def similarities(infile, simfunc, term_colname, outfile, min_df=None, max_df=Non
     output_parquet =  Path(str(p).replace("".join(p.suffixes), ".parquet"))
 
     sims.to_feather(outfile)
-    tempdir.cleanup()
+#    tempdir.cleanup()
 
 def read_tfidf_matrix_weekly(path, term_colname, week, tfidf_colname='tf_idf'):
     term = term_colname
@@ -135,10 +167,10 @@ def write_weekly_similarities(path, sims, week, names):
     sims['week'] = week
     p = pathlib.Path(path)
     if not p.is_dir():
-        p.mkdir()
+        p.mkdir(exist_ok=True,parents=True)
         
     # reformat as a pairwise list
-    sims = sims.melt(id_vars=['subreddit','week'],value_vars=names.subreddit.values)
+    sims = sims.melt(id_vars=['_subreddit','week'],value_vars=names.subreddit.values)
     sims.to_parquet(p / week.isoformat())
 
 def column_overlaps(mat):
@@ -150,11 +182,29 @@ def column_overlaps(mat):
 
     return intersection / den
     
+# n_components is the latent dimensionality. sklearn recommends 100. More might be better
+# if algorithm is 'random' instead of 'arpack' then n_iter gives the number of iterations.
+# this function takes the svd and then the column similarities of it
+def lsi_column_similarities(tfidfmat,n_components=300,n_iter=5,random_state=1968,algorithm='arpack'):
+    # first compute the lsi of the matrix
+    # then take the column similarities
+    svd = TruncatedSVD(n_components=n_components,random_state=random_state,algorithm='arpack')
+    mod = svd.fit(tfidfmat.T)
+    lsimat = mod.transform(tfidfmat.T)
+    sims = column_similarities(lsimat)
+    return sims
+    
+
 def column_similarities(mat):
-    norm = np.matrix(np.power(mat.power(2).sum(axis=0),0.5,dtype=np.float32))
-    mat = mat.multiply(1/norm)
-    sims = mat.T @ mat
-    return(sims)
+    return 1 - pairwise_distances(mat,metric='cosine')
+    # if issparse(mat):
+    #     norm = np.matrix(np.power(mat.power(2).sum(axis=0),0.5,dtype=np.float32))
+    #     mat = mat.multiply(1/norm)
+    # else:
+    #     norm = np.matrix(np.power(np.power(mat,2).sum(axis=0),0.5,dtype=np.float32))
+    #     mat = np.multiply(mat,1/norm)
+    # sims = mat.T @ mat
+    # return(sims)
 
 
 def prep_tfidf_entries_weekly(tfidf, term_colname, min_df, max_df, included_subreddits):
@@ -202,7 +252,8 @@ def prep_tfidf_entries(tfidf, term_colname, min_df, max_df, included_subreddits)
 
     if min_df is None:
         min_df = 0.1 * len(included_subreddits)
-        tfidf = tfidf.filter(f.col('count') >= min_df)
+
+    tfidf = tfidf.filter(f.col('count') >= min_df)
     if max_df is not None:
         tfidf = tfidf.filter(f.col('count') <= max_df)
 
@@ -392,3 +443,5 @@ def select_topN_subreddits(topN, path="/gscratch/comdata/output/reddit_similarit
     rankdf = pd.read_csv(path)
     included_subreddits = set(rankdf.loc[rankdf.comments_rank <= topN,'subreddit'].values)
     return included_subreddits
+
+
