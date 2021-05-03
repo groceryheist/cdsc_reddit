@@ -28,6 +28,13 @@ def test_select_hdbscan_clustering():
     cluster_selection_methods=['eom'];
     lsi_dimensions='all'
 
+    df = pd.read_csv("test_hdbscan/selection_data.csv")
+    test_select_hdbscan_clustering()
+    check_clusters = pd.read_feather("test_hdbscan/500_2_2_0.1_eom.feather")
+    silscores = pd.read_feather("test_hdbscan/silhouette_samples500_2_2_0.1_eom.feather")
+    c = check_clusters.merge(silscores,on='subreddit')#    fire.Fire(select_hdbscan_clustering)
+
+
 @dataclass
 class hdbscan_clustering_result(clustering_result):
     min_cluster_size:int
@@ -165,8 +172,4 @@ def make_KNN_plots():
     KNN_distances_plot(mat,k=2,outname='authors-tf_knn_dist2.png')
 
 if __name__ == "__main__":
-    df = pd.read_csv("test_hdbscan/selection_data.csv")
-    test_select_hdbscan_clustering()
-    check_clusters = pd.read_feather("test_hdbscan/500_2_2_0.1_eom.feather")
-    silscores = pd.read_feather("test_hdbscan/silhouette_samples500_2_2_0.1_eom.feather")
-    c = check_clusters.merge(silscores,on='subreddit')#    fire.Fire(select_hdbscan_clustering)
+    fire.Fire(select_hdbscan_clustering)

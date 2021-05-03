@@ -1,23 +1,32 @@
-from sklearn.metrics import silhouette_score
-from sklearn.cluster import AffinityPropagation
-from functools import partial
-from clustering import _kmeans_clustering, read_similarity_mat, sim_to_dist, process_clustering_result, clustering_result
-from dataclasses import dataclass
-from multiprocessing  import Pool, cpu_count, Array, Process
-from pathlib import Path
-from itertools import product, starmap
-import numpy as np
-import pandas as pd
+from sklearn.cluster import KMeans
 import fire
-import sys
+from pathlib import Path
+from multiprocessing import cpu_count
+from dataclasses import dataclass
+from clustering_base import sim_to_dist, process_clustering_result, clustering_result, read_similarity_mat
 
 @dataclass
 class kmeans_clustering_result(clustering_result):
     n_clusters:int
     n_init:int
 
+def kmeans_clustering(similarities, *args, **kwargs):
+    subreddits, mat = read_similarity_mat(similarities)
+    mat = sim_to_dist(mat)
+    clustering = _kmeans_clustering(mat, *args, **kwargs)
+    cluster_data = process_clustering_result(clustering, subreddits)
+    return(cluster_data)
 
-# silhouette is the only one that doesn't need the feature matrix. So it's probably the only one that's worth trying. 
+def _kmeans_clustering(mat, output, n_clusters, n_init=10, max_iter=100000, random_state=1968, verbose=True):
+
+    clustering = KMeans(n_clusters=n_clusters,
+                        n_init=n_init,
+                        max_iter=max_iter,
+                        random_state=random_state,
+                        verbose=verbose
+                        ).fit(mat)
+
+    return clustering
 
 def do_clustering(n_clusters, n_init, name, mat, subreddits,  max_iter, outdir:Path, random_state, verbose, alt_mat, overwrite=False):
     if name is None:

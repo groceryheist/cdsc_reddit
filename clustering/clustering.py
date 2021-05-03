@@ -3,7 +3,7 @@
 import sys
 import pandas as pd
 import numpy as np
-from sklearn.cluster import AffinityPropagation, KMeans
+from sklearn.cluster import AffinityPropagation
 import fire
 from pathlib import Path
 from multiprocessing import cpu_count
@@ -44,24 +44,6 @@ def _affinity_clustering(mat, subreddits, output, damping=0.9, max_iter=100000, 
     output.parent.mkdir(parents=True,exist_ok=True)
     cluster_data.to_feather(output)
     print(f"saved {output}")
-    return clustering
-
-def kmeans_clustering(similarities, *args, **kwargs):
-    subreddits, mat = read_similarity_mat(similarities)
-    mat = sim_to_dist(mat)
-    clustering = _kmeans_clustering(mat, *args, **kwargs)
-    cluster_data = process_clustering_result(clustering, subreddits)
-    return(cluster_data)
-
-def _kmeans_clustering(mat, output, n_clusters, n_init=10, max_iter=100000, random_state=1968, verbose=True):
-
-    clustering = KMeans(n_clusters=n_clusters,
-                        n_init=n_init,
-                        max_iter=max_iter,
-                        random_state=random_state,
-                        verbose=verbose
-                        ).fit(mat)
-
     return clustering
 
 
