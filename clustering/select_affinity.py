@@ -1,8 +1,8 @@
 from sklearn.metrics import silhouette_score
 from sklearn.cluster import AffinityPropagation
 from functools import partial
-from clustering import _affinity_clustering, read_similarity_mat
 from dataclasses import dataclass
+from clustering import _affinity_clustering, read_similarity_mat, sim_to_dist, process_clustering_result, clustering_result
 from multiprocessing  import Pool, cpu_count, Array, Process
 from pathlib import Path
 from itertools import product, starmap
@@ -12,40 +12,69 @@ import fire
 import sys
 
 # silhouette is the only one that doesn't need the feature matrix. So it's probably the only one that's worth trying. 
-
 @dataclass
-class clustering_result:
-    outpath:Path
+class affinity_clustering_result(clustering_result):
     damping:float
-    max_iter:int
     convergence_iter:int
     preference_quantile:float
-    silhouette_score:float
-    alt_silhouette_score:float
-    name:str
 
-
-def sim_to_dist(mat):
-    dist = 1-mat
-    dist[dist < 0] = 0
-    np.fill_diagonal(dist,0)
-    return dist
-
-def do_clustering(damping, convergence_iter, preference_quantile, name, mat, subreddits,  max_iter,  outdir:Path, random_state, verbose, alt_mat, overwrite=False):
+def do_affinity_clustering(damping, convergence_iter, preference_quantile, name, mat, subreddits,  max_iter,  outdir:Path, random_state, verbose, alt_mat, overwrite=False):
     if name is None:
         name = f"damping-{damping}_convergenceIter-{convergence_iter}_preferenceQuantile-{preference_quantile}"
     print(name)
     sys.stdout.flush()
     outpath = outdir / (str(name) + ".feather")
+    outpath.parent.mkdir(parents=True,exist_ok=True)
+    print(outpath)
+    clustering = _affinity_clustering(mat, outpath, damping, max_iter, convergence_iter, preference_quantile, random_state, verbose)
+    cluster_data = process_clustering_result(clustering, subreddits)
+    mat = sim_to_dist(clustering.affinity_matrix_)
+
+    try: 
+        score = silhouette_score(mat, clustering.labels_, metric='precomputed')
+    except ValueError:
+        score = None
+
+    if alt_mat is not None:
+        alt_distances = sim_to_dist(alt_mat)
+        try:
+            alt_score = silhouette_score(alt_mat, clustering.labels_, metric='precomputed')
+        except ValueError:
+            alt_score = None
+    
+    res = affinity_clustering_result(outpath=outpath,
+                                     damping=damping,
+                                     max_iter=max_iter,
+                                     convergence_iter=convergence_iter,
+                                     preference_quantile=preference_quantile,
+                                     silhouette_score=score,
+                                     alt_silhouette_score=score,
+                                     name=str(name))
+
+    return res
+
+def do_affinity_clustering(damping, convergence_iter, preference_quantile, name, mat, subreddits,  max_iter,  outdir:Path, random_state, verbose, alt_mat, overwrite=False):
+    if name is None:
+        name = f"damping-{damping}_convergenceIter-{convergence_iter}_preferenceQuantile-{preference_quantile}"
+    print(name)
+    sys.stdout.flush()
+    outpath = outdir / (str(name) + ".feather")
+    outpath.parent.mkdir(parents=True,exist_ok=True)
     print(outpath)
     clustering = _affinity_clustering(mat, subreddits, outpath, damping, max_iter, convergence_iter, preference_quantile, random_state, verbose)
     mat = sim_to_dist(clustering.affinity_matrix_)
 
-    score = silhouette_score(mat, clustering.labels_, metric='precomputed')
+    try: 
+        score = silhouette_score(mat, clustering.labels_, metric='precomputed')
+    except ValueError:
+        score = None
 
     if alt_mat is not None:
         alt_distances = sim_to_dist(alt_mat)
-        alt_score = silhouette_score(alt_mat, clustering.labels_, metric='precomputed')
+        try:
+            alt_score = silhouette_score(alt_mat, clustering.labels_, metric='precomputed')
+        except ValueError:
+            alt_score = None
     
     res = clustering_result(outpath=outpath,
                             damping=damping,
@@ -57,6 +86,7 @@ def do_clustering(damping, convergence_iter, preference_quantile, name, mat, sub
                             name=str(name))
 
     return res
+
 
 # alt similiarities is for checking the silhouette coefficient of an alternative measure of similarity (e.g., topic similarities for user clustering).
 
@@ -86,7 +116,7 @@ def select_affinity_clustering(similarities, outdir, outinfo, damping=[0.9], max
     hyper_grid = product(damping, convergence_iter, preference_quantile)
     hyper_grid = (t + (str(i),) for i, t in enumerate(hyper_grid))
 
-    _do_clustering = partial(do_clustering,  mat=mat, subreddits=subreddits, outdir=outdir, max_iter=max_iter, random_state=random_state, verbose=verbose, alt_mat=alt_mat)
+    _do_clustering = partial(do_affinity_clustering,  mat=mat, subreddits=subreddits, outdir=outdir, max_iter=max_iter, random_state=random_state, verbose=verbose, alt_mat=alt_mat)
 
     #    similarities = Array('d', mat)
     # call pool.starmap
@@ -94,6 +124,7 @@ def select_affinity_clustering(similarities, outdir, outinfo, damping=[0.9], max
     clustering_data = pool.starmap(_do_clustering, hyper_grid)
     clustering_data = pd.DataFrame(list(clustering_data))
     clustering_data.to_csv(outinfo)
+
     
     return clustering_data
 

@@ -15,10 +15,9 @@ def _tfidf_wrapper(func, inpath, outpath, topN, term_colname, exclude, included_
     else:
         include_subs = select_topN_subreddits(topN)
 
-    df = func(df, include_subs, term_colname)
+    dfwriter = func(df, include_subs, term_colname)
 
-    df.write.parquet(outpath,mode='overwrite',compression='snappy')
-
+    dfwriter.parquet(outpath,mode='overwrite',compression='snappy')
     spark.stop()
 
 def tfidf(inpath, outpath, topN, term_colname, exclude, included_subreddits):

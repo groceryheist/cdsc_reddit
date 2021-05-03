@@ -3,24 +3,23 @@
 import sys
 import pandas as pd
 import numpy as np
-from sklearn.cluster import AffinityPropagation
+from sklearn.cluster import AffinityPropagation, KMeans
 import fire
 from pathlib import Path
+from multiprocessing import cpu_count
+from dataclasses import dataclass
+from clustering_base import sim_to_dist, process_clustering_result, clustering_result, read_similarity_mat
 
-def read_similarity_mat(similarities, use_threads=True):
-    df = pd.read_feather(similarities, use_threads=use_threads)
-    mat = np.array(df.drop('_subreddit',1))
-    n = mat.shape[0]
-    mat[range(n),range(n)] = 1
-    return (df._subreddit,mat)
-
-def affinity_clustering(similarities, *args, **kwargs):
+def affinity_clustering(similarities, output, *args, **kwargs):
     subreddits, mat = read_similarity_mat(similarities)
-    return _affinity_clustering(mat, subreddits, *args, **kwargs)
+    clustering = _affinity_clustering(mat, *args, **kwargs)
+    cluster_data = process_clustering_result(clustering, subreddits)
+    cluster_data['algorithm'] = 'affinity'
+    return(cluster_data)
 
 def _affinity_clustering(mat, subreddits, output, damping=0.9, max_iter=100000, convergence_iter=30, preference_quantile=0.5, random_state=1968, verbose=True):
     '''
-    similarities: feather file with a dataframe of similarity scores
+    similarities: matrix of similarity scores
     preference_quantile: parameter controlling how many clusters to make. higher values = more clusters. 0.85 is a good value with 3000 subreddits.
     damping: parameter controlling how iterations are merged. Higher values make convergence faster and more dependable. 0.85 is a good value for the 10000 subreddits by author. 
     '''
@@ -40,25 +39,32 @@ def _affinity_clustering(mat, subreddits, output, damping=0.9, max_iter=100000, 
                                      verbose=verbose,
                                      random_state=random_state).fit(mat)
 
-
-    print(f"clustering took {clustering.n_iter_} iterations")
-    clusters = clustering.labels_
-
-    print(f"found {len(set(clusters))} clusters")
-
-    cluster_data = pd.DataFrame({'subreddit': subreddits,'cluster':clustering.labels_})
-
-    cluster_sizes = cluster_data.groupby("cluster").count()
-    print(f"the largest cluster has {cluster_sizes.subreddit.max()} members")
-
-    print(f"the median cluster has {cluster_sizes.subreddit.median()} members")
-
-    print(f"{(cluster_sizes.subreddit==1).sum()} clusters have 1 member")
-
-    sys.stdout.flush()
+    cluster_data = process_clustering_result(clustering, subreddits)
+    output = Path(output)
+    output.parent.mkdir(parents=True,exist_ok=True)
     cluster_data.to_feather(output)
     print(f"saved {output}")
     return clustering
+
+def kmeans_clustering(similarities, *args, **kwargs):
+    subreddits, mat = read_similarity_mat(similarities)
+    mat = sim_to_dist(mat)
+    clustering = _kmeans_clustering(mat, *args, **kwargs)
+    cluster_data = process_clustering_result(clustering, subreddits)
+    return(cluster_data)
+
+def _kmeans_clustering(mat, output, n_clusters, n_init=10, max_iter=100000, random_state=1968, verbose=True):
+
+    clustering = KMeans(n_clusters=n_clusters,
+                        n_init=n_init,
+                        max_iter=max_iter,
+                        random_state=random_state,
+                        verbose=verbose
+                        ).fit(mat)
+
+    return clustering
+
+
 
 if __name__ == "__main__":
     fire.Fire(affinity_clustering)
