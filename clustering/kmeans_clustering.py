@@ -4,98 +4,145 @@ from pathlib import Path
 from multiprocessing import cpu_count
 from dataclasses import dataclass
 from clustering_base import sim_to_dist, process_clustering_result, clustering_result, read_similarity_mat
+from clustering_base import lsi_result_mixin, lsi_mixin, clustering_job, grid_sweep, lsi_grid_sweep
+
 
 @dataclass
 class kmeans_clustering_result(clustering_result):
     n_clusters:int
     n_init:int
+    max_iter:int
 
-def kmeans_clustering(similarities, *args, **kwargs):
-    subreddits, mat = read_similarity_mat(similarities)
-    mat = sim_to_dist(mat)
-    clustering = _kmeans_clustering(mat, *args, **kwargs)
-    cluster_data = process_clustering_result(clustering, subreddits)
-    return(cluster_data)
+@dataclass
+class kmeans_clustering_result_lsi(kmeans_clustering_result, lsi_result_mixin):
+    pass
 
-def _kmeans_clustering(mat, output, n_clusters, n_init=10, max_iter=100000, random_state=1968, verbose=True):
+class kmeans_job(clustering_job):
+    def __init__(self, infile, outpath, name, n_clusters, n_init=10, max_iter=100000, random_state=1968, verbose=True):
+        super().__init__(infile,
+                         outpath,
+                         name,
+                         call=kmeans_job._kmeans_clustering,
+                         n_clusters=n_clusters,
+                         n_init=n_init,
+                         max_iter=max_iter,
+                         random_state=random_state,
+                         verbose=verbose)
 
-    clustering = KMeans(n_clusters=n_clusters,
-                        n_init=n_init,
-                        max_iter=max_iter,
-                        random_state=random_state,
-                        verbose=verbose
-                        ).fit(mat)
+        self.n_clusters=n_clusters
+        self.n_init=n_init
+        self.max_iter=max_iter
 
-    return clustering
+    def _kmeans_clustering(mat, *args, **kwargs):
 
-def do_clustering(n_clusters, n_init, name, mat, subreddits,  max_iter, outdir:Path, random_state, verbose, alt_mat, overwrite=False):
-    if name is None:
-        name = f"damping-{damping}_convergenceIter-{convergence_iter}_preferenceQuantile-{preference_quantile}"
-    print(name)
-    sys.stdout.flush()
-    outpath = outdir / (str(name) + ".feather")
-    print(outpath)
-    mat = sim_to_dist(mat)
-    clustering = _kmeans_clustering(mat, outpath, n_clusters, n_init, max_iter, random_state, verbose)
+        clustering = KMeans(*args,
+                            **kwargs,
+                            ).fit(mat)
 
-    outpath.parent.mkdir(parents=True,exist_ok=True)
-    cluster_data.to_feather(outpath)
-    cluster_data = process_clustering_result(clustering, subreddits)
+        return clustering
 
-    try: 
-        score = silhouette_score(mat, clustering.labels_, metric='precomputed')
-    except ValueError:
-        score = None
 
-    if alt_mat is not None:
-        alt_distances = sim_to_dist(alt_mat)
-        try:
-            alt_score = silhouette_score(alt_mat, clustering.labels_, metric='precomputed')
-        except ValueError:
-            alt_score = None
+    def get_info(self):
+        result = super().get_info()
+        self.result = kmeans_clustering_result(**result.__dict__,
+                                               n_init=n_init,
+                                               max_iter=max_iter)
+        return self.result
+
+
+class kmeans_lsi_job(kmeans_job, lsi_mixin):
+    def __init__(self, infile, outpath, name, lsi_dims, *args, **kwargs):
+        super().__init__(infile,
+                         outpath,
+                         name,
+                         *args,
+                         **kwargs)
+        super().set_lsi_dims(lsi_dims)
+
+    def get_info(self):
+        result = super().get_info()
+        self.result = kmeans_clustering_result_lsi(**result.__dict__,
+                                                   lsi_dimensions=self.lsi_dims)
+        return self.result
     
-    res = kmeans_clustering_result(outpath=outpath,
-                                   max_iter=max_iter,
-                                   n_clusters=n_clusters,
-                                   n_init = n_init,
-                                   silhouette_score=score,
-                                   alt_silhouette_score=score,
-                                   name=str(name))
 
-    return res
+class kmeans_grid_sweep(grid_sweep):
+    def __init__(self,
+                 inpath,
+                 outpath,
+                 *args,
+                 **kwargs):
+        super().__init__(kmeans_job, inpath, outpath, self.namer, *args, **kwargs)
 
+    def namer(self,
+             n_clusters,
+             n_init,
+             max_iter):
+        return f"nclusters-{n_clusters}_nit-{n_init}_maxit-{max_iter}"
 
-# alt similiarities is for checking the silhouette coefficient of an alternative measure of similarity (e.g., topic similarities for user clustering).
-def select_kmeans_clustering(similarities, outdir, outinfo, n_clusters=[1000], max_iter=100000, n_init=10, random_state=1968, verbose=True, alt_similarities=None):
+class _kmeans_lsi_grid_sweep(grid_sweep):
+    def __init__(self,
+                 inpath,
+                 outpath,
+                 lsi_dim,
+                 *args,
+                 **kwargs):
+        self.lsi_dim = lsi_dim
+        self.jobtype = kmeans_lsi_job
+        super().__init__(self.jobtype, inpath, outpath, self.namer, self.lsi_dim, *args, **kwargs)
 
-    n_clusters = list(map(int,n_clusters))
-    n_init  = list(map(int,n_init))
+    def namer(self, *args, **kwargs):
+        s = kmeans_grid_sweep.namer(self, *args[1:], **kwargs)
+        s += f"_lsi-{self.lsi_dim}"
+        return s
 
-    if type(outdir) is str:
-        outdir = Path(outdir)
+class kmeans_lsi_grid_sweep(lsi_grid_sweep):
+    def __init__(self,
+                 inpath,
+                 lsi_dims,
+                 outpath,
+                 n_clusters,
+                 n_inits,
+                 max_iters
+                 ):
 
-    outdir.mkdir(parents=True,exist_ok=True)
+        super().__init__(kmeans_lsi_job,
+                         _kmeans_lsi_grid_sweep,
+                         inpath,
+                         lsi_dims,
+                         outpath,
+                         n_clusters,
+                         n_inits,
+                         max_iters)
 
-    subreddits, mat = read_similarity_mat(similarities,use_threads=True)
+def test_select_kmeans_clustering():
+    # select_hdbscan_clustering("/gscratch/comdata/output/reddit_similarity/subreddit_comment_authors-tf_30k_LSI",
+    #                           "test_hdbscan_author30k",
+    #                           min_cluster_sizes=[2],
+    #                           min_samples=[1,2],
+    #                           cluster_selection_epsilons=[0,0.05,0.1,0.15],
+    #                           cluster_selection_methods=['eom','leaf'],
+    #                           lsi_dimensions='all')
+    inpath = "/gscratch/comdata/output/reddit_similarity/subreddit_comment_authors-tf_10k_LSI/"
+    outpath = "test_kmeans";
+    n_clusters=[200,300,400];
+    n_init=[1,2,3];
+    max_iter=[100000]
 
-    if alt_similarities is not None:
-        alt_mat = read_similarity_mat(alt_similarities,use_threads=True)
-    else:
-        alt_mat = None
+    gs = kmeans_lsi_grid_sweep(inpath, 'all', outpath, n_clusters, n_init, max_iter)
+    gs.run(1)
 
-    # get list of tuples: the combinations of hyperparameters
-    hyper_grid = product(n_clusters, n_init)
-    hyper_grid = (t + (str(i),) for i, t in enumerate(hyper_grid))
+    cluster_selection_epsilons=[0,0.1,0.3,0.5];
+    cluster_selection_methods=['eom'];
+    lsi_dimensions='all'
+    gs = hdbscan_lsi_grid_sweep(inpath, "all", outpath, min_cluster_sizes, min_samples, cluster_selection_epsilons, cluster_selection_methods)
+    gs.run(20)
+    gs.save("test_hdbscan/lsi_sweep.csv")
 
-    _do_clustering = partial(do_clustering,  mat=mat, subreddits=subreddits, outdir=outdir, max_iter=max_iter, random_state=random_state, verbose=verbose, alt_mat=alt_mat)
-
-    # call starmap
-    print("running clustering selection")
-    clustering_data = starmap(_do_clustering, hyper_grid)
-    clustering_data = pd.DataFrame(list(clustering_data))
-    clustering_data.to_csv(outinfo)
-    
-    return clustering_data
 
 if __name__ == "__main__":
-    x = fire.Fire(select_kmeans_clustering)
+
+    fire.Fire{'grid_sweep':kmeans_grid_sweep,
+              'grid_sweep_lsi':kmeans_lsi_grid_sweep
+              'cluster':kmeans_job,
+              'cluster_lsi':kmeans_lsi_job}
