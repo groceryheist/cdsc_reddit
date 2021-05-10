@@ -1,16 +1,12 @@
-from sklearn.metrics import silhouette_score
 from sklearn.cluster import AffinityPropagation
-from functools import partial
 from dataclasses import dataclass
-from clustering_base import sim_to_dist, process_clustering_result, clustering_result, read_similarity_mat
-from clustering_base import lsi_result_mixin, lsi_mixin, clustering_job, grid_sweep, lsi_grid_sweep
-from multiprocessing  import Pool, cpu_count, Array, Process
+from clustering_base import clustering_result, clustering_job
+from grid_sweep import grid_sweep
 from pathlib import Path
 from itertools import product, starmap
-import numpy as np
-import pandas as pd
 import fire
 import sys
+import numpy as np
 
 # silhouette is the only one that doesn't need the feature matrix. So it's probably the only one that's worth trying. 
 @dataclass
@@ -20,10 +16,6 @@ class affinity_clustering_result(clustering_result):
     preference_quantile:float
     preference:float
     max_iter:int
-
-@dataclass
-class affinity_clustering_result_lsi(affinity_clustering_result, lsi_result_mixin):
-    pass
 
 class affinity_job(clustering_job):
     def __init__(self, infile, outpath, name, damping=0.9, max_iter=100000, convergence_iter=30, preference_quantile=0.5, random_state=1968, verbose=True):
@@ -67,21 +59,6 @@ class affinity_job(clustering_job):
 
         return self.result
 
-class affinity_lsi_job(affinity_job, lsi_mixin):
-    def __init__(self, infile, outpath, name, lsi_dims, *args, **kwargs):
-        super().__init__(infile,
-                         outpath,
-                         name,
-                         *args,
-                         **kwargs)
-        super().set_lsi_dims(lsi_dims)
-
-    def get_info(self):
-        result = super().get_info()
-        self.result = affinity_clustering_result_lsi(**result.__dict__,
-                                                     lsi_dimensions=self.lsi_dims)
-        return self.result
-
 class affinity_grid_sweep(grid_sweep):
     def __init__(self,
                  inpath,
@@ -104,49 +81,29 @@ class affinity_grid_sweep(grid_sweep):
 
         return f"damp-{damping}_maxit-{max_iter}_convit-{convergence_iter}_prefq-{preference_quantile}"
 
-class _affinity_lsi_grid_sweep(grid_sweep):
-    def __init__(self,
-                 inpath,
-                 outpath,
-                 lsi_dim,
-                 *args,
-                 **kwargs):
-        self.lsi_dim = lsi_dim
-        self.jobtype = affinity_lsi_job
-        super().__init__(self.jobtype,
-                         inpath,
-                         outpath,
-                         self.namer,
-                         self.lsi_dim,
-                         *args,
-                         **kwargs)
-
-    def namer(self, *args, **kwargs):
-        s = affinity_grid_sweep.namer(self, *args[1:], **kwargs)
-        s += f"_lsi-{self.lsi_dim}"
-        return s
-
-class affinity_lsi_grid_sweep(lsi_grid_sweep):
-    def __init__(self,
-                 inpath,
-                 lsi_dims,
-                 outpath,
-                 dampings=[0.9],
-                 max_iters=[10000],
-                 convergence_iters=[30],
-                 preference_quantiles=[0.5]):
-
-        super().__init__(affinity_lsi_job,
-                         _affinity_lsi_grid_sweep,
-                         inpath,
-                         lsi_dims,
-                         outpath,
-                         dampings,
-                         max_iters,
-                         convergence_iters,
-                         preference_quantiles)
+def run_affinity_grid_sweep(savefile, inpath, outpath, dampings=[0.8], max_iters=[3000], convergence_iters=[30], preference_quantiles=[0.5]):
+    """Run affinity clustering once or more with different parameters.
     
-                         
+    Usage:
+    affinity_clustering.py --savefile=SAVEFILE --inpath=INPATH --outpath=OUTPATH --max_iters=<csv> --dampings=<csv> --preference_quantiles=<csv>
+
+    Keword arguments:
+    savefile: path to save the metadata and diagnostics 
+    inpath: path to feather data containing a labeled matrix of subreddit similarities.
+    outpath: path to output fit kmeans clusterings.
+    dampings:one or more numbers in [0.5, 1). damping parameter in affinity propagatin clustering. 
+    preference_quantiles:one or more numbers in (0,1) for selecting the 'preference' parameter.
+    convergence_iters:one or more integers of number of iterations without improvement before stopping.
+    max_iters: one or more numbers of different maximum interations.
+    """
+    obj = affinity_grid_sweep(inpath,
+                         outpath,
+                         map(float,dampings),
+                         map(int,max_iters),
+                         map(int,convergence_iters),
+                         map(float,preference_quantiles))
+    obj.run(1)
+    obj.save(savefile)
     
 def test_select_affinity_clustering():
     # select_hdbscan_clustering("/gscratch/comdata/output/reddit_similarity/subreddit_comment_authors-tf_30k_LSI",
@@ -169,7 +126,4 @@ def test_select_affinity_clustering():
 
 
 if __name__ == "__main__":
-    fire.Fire{'grid_sweep':affinity_grid_sweep,
-              'grid_sweep_lsi':affinity_lsi_grid_sweep
-              'cluster':affinity_job,
-              'cluster_lsi':affinity_lsi_job}
+    fire.Fire(run_affinity_grid_sweep)

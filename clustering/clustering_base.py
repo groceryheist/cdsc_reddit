@@ -3,59 +3,6 @@ import numpy as np
 import pandas as pd
 from dataclasses import dataclass
 from sklearn.metrics import silhouette_score, silhouette_samples
-from itertools import product, chain
-from multiprocessing import Pool, cpu_count
-
-def sim_to_dist(mat):
-    dist = 1-mat
-    dist[dist < 0] = 0
-    np.fill_diagonal(dist,0)
-    return dist
-
-class grid_sweep:
-    def __init__(self, jobtype, inpath, outpath, namer, *args):
-        self.jobtype = jobtype
-        self.namer = namer
-        grid = list(product(*args))
-        inpath = Path(inpath)
-        outpath = Path(outpath)
-        self.hasrun = False
-        self.grid = [(inpath,outpath,namer(*g)) + g for g in grid]
-        self.jobs = [jobtype(*g) for g in self.grid]
-
-    def run(self, cores=20):
-        if cores is not None and cores > 1:
-            with Pool(cores) as pool:
-                infos = pool.map(self.jobtype.get_info, self.jobs)
-        else:
-            infos = map(self.jobtype.get_info, self.jobs)
-
-        self.infos = pd.DataFrame(infos)
-        self.hasrun = True
-
-    def save(self, outcsv):
-        if not self.hasrun:
-            self.run()
-        outcsv = Path(outcsv)
-        outcsv.parent.mkdir(parents=True, exist_ok=True)
-        self.infos.to_csv(outcsv)
-
-
-class lsi_grid_sweep(grid_sweep):
-    def __init__(self, jobtype, subsweep, inpath, lsi_dimensions, outpath, *args, **kwargs):
-        self.jobtype = jobtype
-        self.subsweep = subsweep
-        inpath = Path(inpath)
-        if lsi_dimensions == 'all':
-            lsi_paths = list(inpath.glob("*"))
-        else:
-            lsi_paths = [inpath / (dim + '.feather') for dim in lsi_dimensions]
-
-        lsi_nums = [p.stem for p in lsi_paths]
-        self.hasrun = False
-        self.subgrids = [self.subsweep(lsi_path, outpath,  lsi_dim, *args, **kwargs) for lsi_dim, lsi_path in zip(lsi_nums, lsi_paths)]
-        self.jobs = list(chain(*map(lambda gs: gs.jobs, self.subgrids)))
-
 
 # this is meant to be an interface, not created directly
 class clustering_job:
@@ -86,19 +33,24 @@ class clustering_job:
                                         name=self.name,
                                         n_clusters=self.n_clusters,
                                         n_isolates=self.n_isolates,
-                                        silhouette_samples = str(self.silsampout.resolve())
+                                        silhouette_samples = self.silsampout
                                         )
         return self.result
 
     def silhouette(self):
         isolates = self.clustering.labels_ == -1
         scoremat = self.mat[~isolates][:,~isolates]
-        score = silhouette_score(scoremat, self.clustering.labels_[~isolates], metric='precomputed')
-        silhouette_samp = silhouette_samples(self.mat, self.clustering.labels_, metric='precomputed')
-        silhouette_samp = pd.DataFrame({'subreddit':self.subreddits,'score':silhouette_samp})
-        self.outpath.mkdir(parents=True, exist_ok=True)
-        self.silsampout = self.outpath / ("silhouette_samples-" + self.name +  ".feather")
-        silhouette_samp.to_feather(self.silsampout)
+        if scoremat.shape[0] > 0:
+            score = silhouette_score(scoremat, self.clustering.labels_[~isolates], metric='precomputed')
+            silhouette_samp = silhouette_samples(self.mat, self.clustering.labels_, metric='precomputed')
+            silhouette_samp = pd.DataFrame({'subreddit':self.subreddits,'score':silhouette_samp})
+            self.outpath.mkdir(parents=True, exist_ok=True)
+            silsampout = self.outpath / ("silhouette_samples-" + self.name +  ".feather")
+            self.silsampout = silsampout.resolve()
+            silhouette_samp.to_feather(self.silsampout)
+        else:
+            score = None
+            self.silsampout = None
         return score
 
     def read_distance_mat(self, similarities, use_threads=True):
@@ -139,11 +91,6 @@ class clustering_job:
 
         return cluster_data
 
-
-class lsi_mixin():
-    def set_lsi_dims(self, lsi_dims):
-        self.lsi_dims = lsi_dims
-
 @dataclass
 class clustering_result:
     outpath:Path
@@ -152,7 +99,3 @@ class clustering_result:
     n_clusters:int
     n_isolates:int
     silhouette_samples:str
-
-@dataclass
-class lsi_result_mixin:
-    lsi_dimensions:int
