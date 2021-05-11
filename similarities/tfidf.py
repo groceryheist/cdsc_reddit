@@ -15,17 +15,16 @@ def _tfidf_wrapper(func, inpath, outpath, topN, term_colname, exclude, included_
     else:
         include_subs = select_topN_subreddits(topN)
 
-    df = func(df, include_subs, term_colname)
+    dfwriter = func(df, include_subs, term_colname)
 
-    df.write.parquet(outpath,mode='overwrite',compression='snappy')
-
+    dfwriter.parquet(outpath,mode='overwrite',compression='snappy')
     spark.stop()
 
 def tfidf(inpath, outpath, topN, term_colname, exclude, included_subreddits):
     return _tfidf_wrapper(build_tfidf_dataset, inpath, outpath, topN, term_colname, exclude, included_subreddits)
 
-def tfidf_weekly(inpath, outpath, topN, term_colname, exclude):
-    return _tfidf_wrapper(build_weekly_tfidf_dataset, inpath, outpath, topN, term_colname, included_subreddits)
+def tfidf_weekly(inpath, outpath, topN, term_colname, exclude, included_subreddits):
+    return _tfidf_wrapper(build_weekly_tfidf_dataset, inpath, outpath, topN, term_colname, exclude, included_subreddits)
 
 def tfidf_authors(outpath='/gscratch/comdata/output/reddit_similarity/tfidf/comment_authors.parquet',
                   topN=25000):
