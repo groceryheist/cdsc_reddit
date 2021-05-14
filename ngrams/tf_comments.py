@@ -13,10 +13,7 @@ from nltk.corpus import stopwords
 from nltk.util import ngrams
 import string
 from random import random
-
-# remove urls
-# taken from https://stackoverflow.com/questions/3809401/what-is-a-good-regular-expression-to-match-a-url
-urlregex = re.compile(r"[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)")
+from redditcleaner import clean
 
 # compute term frequencies for comments in each subreddit by week
 def weekly_tf(partition, mwe_pass = 'first'):
@@ -95,8 +92,8 @@ def weekly_tf(partition, mwe_pass = 'first'):
         # lowercase        
         text = text.lower()
 
-        # remove urls
-        text = urlregex.sub("", text)
+        # redditcleaner removes reddit markdown(newlines, quotes, bullet points, links, strikethrough, spoiler, code, superscript, table, headings)
+        text = clean(text)
 
         # sentence tokenize
         sentences = sent_tokenize(text)
@@ -107,14 +104,13 @@ def weekly_tf(partition, mwe_pass = 'first'):
         # remove punctuation
                         
         sentences = map(remove_punct, sentences)
-
-        # remove sentences with less than 2 words
-        sentences = filter(lambda sentence: len(sentence) > 2, sentences)
-
         # datta et al. select relatively common phrases from the reddit corpus, but they don't really explain how. We'll try that in a second phase.
         # they say that the extract 1-4 grams from 10% of the sentences and then find phrases that appear often relative to the original terms
         # here we take a 10 percent sample of sentences 
         if mwe_pass == 'first':
+
+            # remove sentences with less than 2 words
+            sentences = filter(lambda sentence: len(sentence) > 2, sentences)
             sentences = list(sentences)
             for sentence in sentences:
                 if random() <= 0.1:

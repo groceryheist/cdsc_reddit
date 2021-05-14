@@ -23,9 +23,6 @@ class tf_weight(Enum):
 infile = "/gscratch/comdata/output/reddit_similarity/tfidf_weekly/comment_terms.parquet"
 cache_file = "/gscratch/comdata/users/nathante/cdsc_reddit/similarities/term_tfidf_entries_bak.parquet"
 
-def termauthor_tfidf(term_tfidf_callable, author_tfidf_callable):
-    
-
 # subreddits missing after this step don't have any terms that have a high enough idf
 # try rewriting without merges
 def reindex_tfidf(infile, term_colname, min_df=None, max_df=None, included_subreddits=None, topN=500, week=None, from_date=None, to_date=None, rescale_idf=True, tf_family=tf_weight.MaxTF):
@@ -283,7 +280,7 @@ def build_weekly_tfidf_dataset(df, include_subs, term_colname, tf_family=tf_weig
         df = df.withColumn("tf_idf",  (0.5 + 0.5 * df.relative_tf) * df.idf)
 
     df = df.repartition(400,'subreddit','week')
-    dfwriter = df.write.partitionBy("week").sortBy("subreddit")
+    dfwriter = df.write.partitionBy("week")
     return dfwriter
 
 def _calc_tfidf(df, term_colname, tf_family):
@@ -339,7 +336,7 @@ def build_tfidf_dataset(df, include_subs, term_colname, tf_family=tf_weight.Norm
 
     df = _calc_tfidf(df, term_colname, tf_family)
     df = df.repartition('subreddit')
-    dfwriter = df.write.sortBy("subreddit","tf")
+    dfwriter = df.write
     return dfwriter
 
 def select_topN_subreddits(topN, path="/gscratch/comdata/output/reddit_similarity/subreddits_by_num_comments_nonsfw.csv"):

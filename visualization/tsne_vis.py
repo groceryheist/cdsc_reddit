@@ -22,8 +22,12 @@ def base_plot(plot_data):
     #
     #    subreddit_select = alt.selection_single(on='click',fields=['subreddit'],bind=subreddit_dropdown,name='subreddit_click')
     
+    base_scale = alt.Scale(scheme={"name":'category10',
+                                   "extent":[0,100],
+                                   "count":10})
+
     color = alt.condition(cluster_click_select ,
-                          alt.Color(field='color',type='nominal',scale=alt.Scale(scheme='category10')),
+                          alt.Color(field='color',type='nominal',scale=base_scale),
                           alt.value("lightgray"))
   
     
@@ -84,6 +88,11 @@ def viewport_plot(plot_data):
     return chart
 
 def assign_cluster_colors(tsne_data, clusters, n_colors, n_neighbors = 4):
+    isolate_color = 101
+
+    cluster_sizes = clusters.groupby('cluster').count()
+    singletons = set(cluster_sizes.loc[cluster_sizes.subreddit == 1].reset_index().cluster)
+
     tsne_data = tsne_data.merge(clusters,on='subreddit')
     
     centroids = tsne_data.groupby('cluster').agg({'x':np.mean,'y':np.mean})
@@ -120,15 +129,17 @@ def assign_cluster_colors(tsne_data, clusters, n_colors, n_neighbors = 4):
     color_assignments = np.repeat(-1,len(centroids))
 
     for i in range(len(centroids)):
-        knn = indices[i]
-        knn_colors = color_assignments[knn]
-        available_colors = color_ids[list(set(color_ids) - set(knn_colors))]
-
-        if(len(available_colors) > 0):
-            color_assignments[i] = available_colors[0]
+        if (centroids.iloc[i].name == -1) or (i in singletons):
+            color_assignments[i] = isolate_color
         else:
-            raise Exception("Can't color this many neighbors with this many colors")
+            knn = indices[i]
+            knn_colors = color_assignments[knn]
+            available_colors = color_ids[list(set(color_ids) - set(knn_colors))]
 
+            if(len(available_colors) > 0):
+                color_assignments[i] = available_colors[0]
+            else:
+                raise Exception("Can't color this many neighbors with this many colors")
 
     centroids = centroids.reset_index()
     colors = centroids.loc[:,['cluster']]
@@ -143,12 +154,13 @@ def build_visualization(tsne_data, clusters, output):
     # clusters = "/gscratch/comdata/output/reddit_clustering/subreddit_author_tf_similarities_10000.feather"
 
     tsne_data = pd.read_feather(tsne_data)
+    tsne_data = tsne_data.rename(columns={'_subreddit':'subreddit'})
     clusters = pd.read_feather(clusters)
 
     tsne_data = assign_cluster_colors(tsne_data,clusters,10,8)
 
-    # sr_per_cluster = tsne_data.groupby('cluster').subreddit.count().reset_index()
-    # sr_per_cluster = sr_per_cluster.rename(columns={'subreddit':'cluster_size'})
+    sr_per_cluster = tsne_data.groupby('cluster').subreddit.count().reset_index()
+    sr_per_cluster = sr_per_cluster.rename(columns={'subreddit':'cluster_size'})
 
     tsne_data = tsne_data.merge(sr_per_cluster,on='cluster')
 
