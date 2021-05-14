@@ -4,7 +4,7 @@ similarity_data=/gscratch/comdata/output/reddit_similarity
 clustering_data=/gscratch/comdata/output/reddit_clustering
 kmeans_selection_grid="--max_iters=[3000] --n_inits=[10] --n_clusters=[100,500,1000,1250,1500,1750,2000]"
 hdbscan_selection_grid="--min_cluster_sizes=[2,3,4,5] --min_samples=[2,3,4,5] --cluster_selection_epsilons=[0,0.01,0.05,0.1,0.15,0.2] --cluster_selection_methods=eom,leaf"
-affinity_selection_grid="--dampings=[0.5,0.55,0.6,0.65,0.7,0.75,0.8,0.85,0.95,0.97,0.99] --preference_quantiles=[0.1,0.3,0.5,0.7,0.9] --convergence_iters=[30]"
+affinity_selection_grid="--dampings=[0.5,0.6,0.7,0.8,0.95,0.97,0.99] --preference_quantiles=[0.1,0.3,0.5,0.7,0.9] --convergence_iters=[15]"
 
 authors_10k_input=$(similarity_data)/subreddit_comment_authors_10k.feather
 authors_10k_input_lsi=$(similarity_data)/subreddit_comment_authors_10k_LSI

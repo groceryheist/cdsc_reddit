@@ -17,7 +17,7 @@ def fit_tsne(similarities, output, learning_rate=750, perplexity=50, n_iter=1000
     df = pd.read_feather(similarities)
 
     n = df.shape[0]
-    mat = np.array(df.drop('subreddit',1),dtype=np.float64)
+    mat = np.array(df.drop('_subreddit',1),dtype=np.float64)
     mat[range(n),range(n)] = 1
     mat[mat > 1] = 1
     dist = 2*np.arccos(mat)/np.pi
@@ -26,7 +26,7 @@ def fit_tsne(similarities, output, learning_rate=750, perplexity=50, n_iter=1000
 
     tsne_fit_whole = tsne_fit_model.fit_transform(dist)
 
-    plot_data = pd.DataFrame({'x':tsne_fit_whole[:,0],'y':tsne_fit_whole[:,1], 'subreddit':df.subreddit})
+    plot_data = pd.DataFrame({'x':tsne_fit_whole[:,0],'y':tsne_fit_whole[:,1], '_subreddit':df['_subreddit']})
 
     plot_data.to_feather(output)
 

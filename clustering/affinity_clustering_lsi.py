@@ -58,7 +58,7 @@ class _affinity_lsi_grid_sweep(grid_sweep):
                          inpath,
                          outpath,
                          self.namer,
-                         self.lsi_dim,
+                         [self.lsi_dim],
                          *args,
                          **kwargs)
 
@@ -67,7 +67,7 @@ class _affinity_lsi_grid_sweep(grid_sweep):
         s += f"_lsi-{self.lsi_dim}"
         return s
                          
-def run_affinity_lsi_grid_sweep(savefile, inpath, outpath, dampings=[0.8], max_iters=[3000], convergence_iters=[30], preference_quantiles=[0.5], lsi_dimensions='all'):
+def run_affinity_lsi_grid_sweep(savefile, inpath, outpath, dampings=[0.8], max_iters=[3000], convergence_iters=[30], preference_quantiles=[0.5], lsi_dimensions='all',n_cores=30):
     """Run affinity clustering once or more with different parameters.
     
     Usage:
@@ -92,7 +92,7 @@ def run_affinity_lsi_grid_sweep(savefile, inpath, outpath, dampings=[0.8], max_i
                             map(int,convergence_iters),
                             map(float,preference_quantiles))
 
-    obj.run(1)
+    obj.run(n_cores)
     obj.save(savefile)
 
 if __name__ == "__main__":

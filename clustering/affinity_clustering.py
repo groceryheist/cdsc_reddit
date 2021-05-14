@@ -81,7 +81,7 @@ class affinity_grid_sweep(grid_sweep):
 
         return f"damp-{damping}_maxit-{max_iter}_convit-{convergence_iter}_prefq-{preference_quantile}"
 
-def run_affinity_grid_sweep(savefile, inpath, outpath, dampings=[0.8], max_iters=[3000], convergence_iters=[30], preference_quantiles=[0.5]):
+def run_affinity_grid_sweep(savefile, inpath, outpath, dampings=[0.8], max_iters=[3000], convergence_iters=[30], preference_quantiles=[0.5],n_cores=10):
     """Run affinity clustering once or more with different parameters.
     
     Usage:
@@ -102,7 +102,7 @@ def run_affinity_grid_sweep(savefile, inpath, outpath, dampings=[0.8], max_iters
                          map(int,max_iters),
                          map(int,convergence_iters),
                          map(float,preference_quantiles))
-    obj.run(1)
+    obj.run(n_cores)
     obj.save(savefile)
     
 def test_select_affinity_clustering():
