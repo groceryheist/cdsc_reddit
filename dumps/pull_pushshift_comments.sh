@@ -8,7 +8,5 @@ wget -r --no-parent -A 'RC_201*.bz2' -U $user_agent -P $output_dir -nd -nc $base
 wget -r --no-parent -A 'RC_201*.xz' -U $user_agent -P $output_dir -nd -nc $base_url
 wget -r --no-parent -A 'RC_201*.zst' -U $user_agent -P $output_dir -nd -nc $base_url
 
-# starting in 2020 we use daily dumps not monthly dumps
-wget -r --no-parent -A 'RC_202*.gz' -U $user_agent -P $output_dir -nd -nc $base_url/daily/
 
 ./check_comments_shas.py
