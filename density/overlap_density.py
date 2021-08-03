@@ -1,11 +1,12 @@
 import pandas as pd
 from pandas.core.groupby import DataFrameGroupBy as GroupBy
+from pathlib import Path
 import fire
 import numpy as np
 import sys
 sys.path.append("..")
 sys.path.append("../similarities")
-from similarities.similarities_helper import reindex_tfidf, reindex_tfidf_time_interval
+from similarities.similarities_helper import reindex_tfidf
 
 # this is the mean of the ratio of the overlap to the focal size.
 # mean shared membership per focal community member
@@ -13,10 +14,12 @@ from similarities.similarities_helper import reindex_tfidf, reindex_tfidf_time_i
 
 def overlap_density(inpath, outpath, agg = pd.DataFrame.sum):
     df = pd.read_feather(inpath)
-    df = df.drop('subreddit',1)
+    df = df.drop('_subreddit',1)
     np.fill_diagonal(df.values,0)
     df = agg(df, 0).reset_index()
     df = df.rename({0:'overlap_density'},axis='columns')
+    outpath = Path(outpath)
+    outpath.parent.mkdir(parents=True, exist_ok = True)
     df.to_feather(outpath)
     return df
 
@@ -25,6 +28,8 @@ def overlap_density_weekly(inpath, outpath, agg = GroupBy.sum):
     # exclude the diagonal
     df = df.loc[df.subreddit != df.variable]
     res = agg(df.groupby(['subreddit','week'])).reset_index()
+    outpath = Path(outpath)
+    outpath.parent.mkdir(parents=True, exist_ok = True)
     res.to_feather(outpath)
     return res
 

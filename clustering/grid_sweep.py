@@ -7,6 +7,7 @@ class grid_sweep:
     def __init__(self, jobtype, inpath, outpath, namer, *args):
         self.jobtype = jobtype
         self.namer = namer
+        print(*args)
         grid = list(product(*args))
         inpath = Path(inpath)
         outpath = Path(outpath)
