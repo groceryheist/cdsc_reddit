@@ -32,7 +32,7 @@ def reindex_tfidf(infile, term_colname, min_df=None, max_df=None, included_subre
     if included_subreddits is None:
         included_subreddits = select_topN_subreddits(topN)
     else:
-        included_subreddits = set(open(included_subreddits))
+        included_subreddits = set(map(str.strip,map(str.lower,open(included_subreddits))))
 
     ds_filter = ds.field("subreddit").isin(included_subreddits)
 
