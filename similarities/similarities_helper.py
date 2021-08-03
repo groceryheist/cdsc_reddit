@@ -97,6 +97,7 @@ def _pull_or_reindex_tfidf(infile, term_colname, min_df=None, max_df=None, inclu
             'relative_tf':ds.field('relative_tf').cast('float32'),
             'tf_idf':ds.field('tf_idf').cast('float32')}
 
+
     df = tfidf_ds.to_table(filter=ds_filter,columns=projection)
 
     df = df.to_pandas(split_blocks=True,self_destruct=True)
@@ -124,6 +125,17 @@ def _pull_or_reindex_tfidf(infile, term_colname, min_df=None, max_df=None, inclu
 
     return (df, tfidf_ds, ds_filter)
 
+    with Pool(cpu_count()) as pool:
+        chunks = pool.imap_unordered(pull_names,batches) 
+        subreddit_names = pd.concat(chunks,copy=False).drop_duplicates()
+
+    subreddit_names = subreddit_names.set_index("subreddit_id")
+    new_ids = df.loc[:,['subreddit_id','subreddit_id_new']].drop_duplicates()
+    new_ids = new_ids.set_index('subreddit_id')
+    subreddit_names = subreddit_names.join(new_ids,on='subreddit_id').reset_index()
+    subreddit_names = subreddit_names.drop("subreddit_id",1)
+    subreddit_names = subreddit_names.sort_values("subreddit_id_new")
+    return(df, subreddit_names)
 
 def pull_names(batch):
     return(batch.to_pandas().drop_duplicates())
@@ -165,7 +177,6 @@ def similarities(inpath, simfunc, term_colname, outfile, min_df=None, max_df=Non
 
     print(f'computing similarities on mat. mat.shape:{mat.shape}')
     print(f"size of mat is:{mat.data.nbytes}",flush=True)
-    # transform this to debug term tfidf
     sims = simfunc(mat)
     del mat
 
@@ -256,13 +267,12 @@ def lsi_column_similarities(tfidfmat,n_components=300,n_iter=10,random_state=196
             yield (sims, n_dims)
         else:
             return sims
+    
 
 def column_similarities(mat):
     return 1 - pairwise_distances(mat,metric='cosine')
 
-# need to rewrite this so that subreddit ids and term ids are fixed over the whole thing.
-# this affords taking the LSI similarities.
-# fill all 0s if we don't have it.
+
 def build_weekly_tfidf_dataset(df, include_subs, term_colname, tf_family=tf_weight.Norm05):
     term = term_colname
     term_id = term + '_id'
@@ -295,7 +305,6 @@ def build_weekly_tfidf_dataset(df, include_subs, term_colname, tf_family=tf_weig
     subreddits = df.select(['subreddit']).distinct()
     subreddits = subreddits.withColumn('subreddit_id',f.row_number().over(Window.orderBy("subreddit")))
 
-    # df = df.cache()
     df = df.join(subreddits,on=['subreddit'])
 
     # map terms to indexes in the tfs and the idfs

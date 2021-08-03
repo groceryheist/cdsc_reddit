@@ -59,7 +59,7 @@ class _hdbscan_lsi_grid_sweep(grid_sweep):
 
         self.lsi_dim = lsi_dim
         self.jobtype = hdbscan_lsi_job
-        super().__init__(self.jobtype, inpath, outpath, self.namer, self.lsi_dim, *args, **kwargs)
+        super().__init__(self.jobtype, inpath, outpath, self.namer, [self.lsi_dim], *args, **kwargs)
 
 
     def namer(self, *args, **kwargs):
@@ -87,9 +87,9 @@ def run_hdbscan_lsi_grid_sweep(savefile, inpath, outpath,  min_cluster_sizes=[2]
     obj = hdbscan_lsi_grid_sweep(inpath,
                                  lsi_dimensions,
                                  outpath,
-                                 map(int,min_cluster_sizes),
-                                 map(int,min_samples),
-                                 map(float,cluster_selection_epsilons),
+                                 list(map(int,min_cluster_sizes)),
+                                 list(map(int,min_samples)),
+                                 list(map(float,cluster_selection_epsilons)),
                                  cluster_selection_methods
                                  )
 

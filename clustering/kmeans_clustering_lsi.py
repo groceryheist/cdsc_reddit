@@ -34,7 +34,7 @@ class _kmeans_lsi_grid_sweep(grid_sweep):
         print(kwargs)
         self.lsi_dim = lsi_dim
         self.jobtype = kmeans_lsi_job
-        super().__init__(self.jobtype, inpath, outpath, self.namer, self.lsi_dim, *args, **kwargs)
+        super().__init__(self.jobtype, inpath, outpath, self.namer, [self.lsi_dim], *args, **kwargs)
 
     def namer(self, *args, **kwargs):
         s = kmeans_grid_sweep.namer(self, *args[1:], **kwargs)
