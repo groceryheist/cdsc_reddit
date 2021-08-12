@@ -67,7 +67,7 @@ class _hdbscan_lsi_grid_sweep(grid_sweep):
         s += f"_lsi-{self.lsi_dim}"
         return s
 
-def run_hdbscan_lsi_grid_sweep(savefile, inpath, outpath,  min_cluster_sizes=[2], min_samples=[1], cluster_selection_epsilons=[0], cluster_selection_methods=['eom'],lsi_dimensions='all'):
+def run_hdbscan_lsi_grid_sweep(savefile, inpath, outpath,  min_cluster_sizes=[2], min_samples=[1], cluster_selection_epsilons=[0], cluster_selection_methods=[1],lsi_dimensions='all'):
     """Run hdbscan clustering once or more with different parameters.
     
     Usage:
@@ -90,8 +90,8 @@ def run_hdbscan_lsi_grid_sweep(savefile, inpath, outpath,  min_cluster_sizes=[2]
                                  list(map(int,min_cluster_sizes)),
                                  list(map(int,min_samples)),
                                  list(map(float,cluster_selection_epsilons)),
-                                 cluster_selection_methods
-                                 )
+                                 cluster_selection_methods)
+                                 
 
     obj.run(10)
     obj.save(savefile)

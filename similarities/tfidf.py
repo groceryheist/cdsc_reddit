@@ -4,7 +4,7 @@ from pyspark.sql import functions as f
 from similarities_helper import tfidf_dataset, build_weekly_tfidf_dataset, select_topN_subreddits
 
 def _tfidf_wrapper(func, inpath, outpath, topN, term_colname, exclude, included_subreddits):
-    spark = SparkSession.builder.getOrCreate()
+    spark = SparkSession.builder.getOrCreate()y
 
     df = spark.read.parquet(inpath)
 
@@ -26,11 +26,12 @@ def tfidf(inpath, outpath, topN, term_colname, exclude, included_subreddits):
 def tfidf_weekly(inpath, outpath, topN, term_colname, exclude, included_subreddits):
     return _tfidf_wrapper(build_weekly_tfidf_dataset, inpath, outpath, topN, term_colname, exclude, included_subreddits)
 
-def tfidf_authors(outpath='/gscratch/comdata/output/reddit_similarity/tfidf/comment_authors.parquet',
+def tfidf_authors(inpath="/gscratch/comdata/output/reddit_ngrams/comment_authors.parquet",
+                  outpath='/gscratch/comdata/output/reddit_similarity/tfidf/comment_authors.parquet',
                   topN=None,
                   included_subreddits=None):
 
-    return tfidf("/gscratch/comdata/output/reddit_ngrams/comment_authors.parquet",
+    return tfidf(inpath,
                  outpath,
                  topN,
                  'author',
@@ -38,11 +39,12 @@ def tfidf_authors(outpath='/gscratch/comdata/output/reddit_similarity/tfidf/comm
                  included_subreddits=included_subreddits
                  )
 
-def tfidf_terms(outpath='/gscratch/comdata/output/reddit_similarity/tfidf/comment_terms.parquet',
+def tfidf_terms(inpath="/gscratch/comdata/output/reddit_ngrams/comment_terms.parquet",
+                outpath='/gscratch/comdata/output/reddit_similarity/tfidf/comment_terms.parquet',
                 topN=None,
                 included_subreddits=None):
 
-    return tfidf("/gscratch/comdata/output/reddit_ngrams/comment_terms.parquet",
+    return tfidf(inpath,
                  outpath,
                  topN,
                  'term',
@@ -50,11 +52,12 @@ def tfidf_terms(outpath='/gscratch/comdata/output/reddit_similarity/tfidf/commen
                  included_subreddits=included_subreddits
                  )
 
-def tfidf_authors_weekly(outpath='/gscratch/comdata/output/reddit_similarity/tfidf_weekly/comment_authors.parquet',
+def tfidf_authors_weekly(inpath="/gscratch/comdata/output/reddit_ngrams/comment_authors.parquet",
+                         outpath='/gscratch/comdata/output/reddit_similarity/tfidf_weekly/comment_authors.parquet',
                          topN=None,
                          included_subreddits=None):
 
-    return tfidf_weekly("/gscratch/comdata/output/reddit_ngrams/comment_authors.parquet",
+    return tfidf_weekly(inpath,
                         outpath,
                         topN,
                         'author',
@@ -62,12 +65,13 @@ def tfidf_authors_weekly(outpath='/gscratch/comdata/output/reddit_similarity/tfi
                         included_subreddits=included_subreddits
                         )
 
-def tfidf_terms_weekly(outpath='/gscratch/comdata/output/reddit_similarity/tfidf_weekly/comment_terms.parquet',
+def tfidf_terms_weekly(inpath="/gscratch/comdata/output/reddit_ngrams/comment_terms.parquet",
+                       outpath='/gscratch/comdata/output/reddit_similarity/tfidf_weekly/comment_terms.parquet',
                        topN=None,
                        included_subreddits=None):
 
 
-    return tfidf_weekly("/gscratch/comdata/output/reddit_ngrams/comment_terms.parquet",
+    return tfidf_weekly(inpath,
                         outpath,
                         topN,
                         'term',

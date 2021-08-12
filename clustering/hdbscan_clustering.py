@@ -18,12 +18,12 @@ def test_select_hdbscan_clustering():
     #                           cluster_selection_epsilons=[0,0.05,0.1,0.15],
     #                           cluster_selection_methods=['eom','leaf'],
     #                           lsi_dimensions='all')
-    inpath = "/gscratch/comdata/output/reddit_similarity/subreddit_comment_authors-tf_10k_LSI/"
+    inpath = "/gscratch/comdata/users/nathante/competitive_exclusion_reddit/data/similarity/comment_authors_compex_LSI"
     outpath = "test_hdbscan";
     min_cluster_sizes=[2,3,4];
     min_samples=[1,2,3];
     cluster_selection_epsilons=[0,0.1,0.3,0.5];
-    cluster_selection_methods=['eom'];
+    cluster_selection_methods=[1];
     lsi_dimensions='all'
     gs = hdbscan_lsi_grid_sweep(inpath, "all", outpath, min_cluster_sizes, min_samples, cluster_selection_epsilons, cluster_selection_methods)
     gs.run(20)
@@ -120,7 +120,7 @@ def run_hdbscan_grid_sweep(savefile, inpath, outpath,  min_cluster_sizes=[2], mi
                              map(int,min_cluster_sizes),
                              map(int,min_samples),
                              map(float,cluster_selection_epsilons),
-                             map(float,cluster_selection_methods))
+                             cluster_selection_methods)
     obj.run()
     obj.save(savefile)
 

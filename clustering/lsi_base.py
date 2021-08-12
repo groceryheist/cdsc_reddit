@@ -18,10 +18,11 @@ class lsi_grid_sweep(grid_sweep):
         self.subsweep = subsweep
         inpath = Path(inpath)
         if lsi_dimensions == 'all':
-            lsi_paths = list(inpath.glob("*"))
+            lsi_paths = list(inpath.glob("*.feather"))
         else:
             lsi_paths = [inpath / (str(dim) + '.feather') for dim in lsi_dimensions]
 
+        print(lsi_paths)
         lsi_nums = [int(p.stem) for p in lsi_paths]
         self.hasrun = False
         self.subgrids = [self.subsweep(lsi_path, outpath,  lsi_dim, *args, **kwargs) for lsi_dim, lsi_path in zip(lsi_nums, lsi_paths)]

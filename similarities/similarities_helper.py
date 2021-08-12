@@ -97,6 +97,7 @@ def _pull_or_reindex_tfidf(infile, term_colname, min_df=None, max_df=None, inclu
             'relative_tf':ds.field('relative_tf').cast('float32'),
             'tf_idf':ds.field('tf_idf').cast('float32')}
 
+        print(projection)
 
     df = tfidf_ds.to_table(filter=ds_filter,columns=projection)
 
@@ -240,7 +241,6 @@ def test_lsi_sims():
 def lsi_column_similarities(tfidfmat,n_components=300,n_iter=10,random_state=1968,algorithm='randomized',lsi_model_save=None,lsi_model_load=None):
     # first compute the lsi of the matrix
     # then take the column similarities
-    print("running LSI",flush=True)
 
     if type(n_components) is int:
         n_components = [n_components]
@@ -249,10 +249,14 @@ def lsi_column_similarities(tfidfmat,n_components=300,n_iter=10,random_state=196
     
     svd_components = n_components[0]
     
-    if lsi_model_load is not None:
+    if lsi_model_load is not None and Path(lsi_model_load).exists():
+        print("loading LSI")
         mod = pickle.load(open(lsi_model_load ,'rb'))
+        lsi_model_save = lsi_model_load
 
     else:
+        print("running LSI",flush=True)
+
         svd = TruncatedSVD(n_components=svd_components,random_state=random_state,algorithm=algorithm,n_iter=n_iter)
         mod = svd.fit(tfidfmat.T)
 
