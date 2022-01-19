@@ -4,9 +4,9 @@ from pathlib import Path
 import fire
 import numpy as np
 import sys
-sys.path.append("..")
-sys.path.append("../similarities")
-from similarities.similarities_helper import reindex_tfidf
+# sys.path.append("..")
+# sys.path.append("../similarities")
+# from similarities.similarities_helper import pull_tfidf
 
 # this is the mean of the ratio of the overlap to the focal size.
 # mean shared membership per focal community member
