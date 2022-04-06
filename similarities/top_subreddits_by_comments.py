@@ -17,7 +17,7 @@ df = df.filter(~df.subreddit.like("u_%"))
 df = df.groupBy('subreddit').agg(f.count('id').alias("n_comments"))
 
 df = df.join(prop_nsfw,on='subreddit')
-#df = df.filter(df.prop_nsfw < 0.5)
+df = df.filter(df.prop_nsfw < 0.5)
 
 win = Window.orderBy(f.col('n_comments').desc())
 df = df.withColumn('comments_rank', f.rank().over(win))
@@ -26,4 +26,4 @@ df = df.toPandas()
 
 df = df.sort_values("n_comments")
 
-df.to_csv('/gscratch/comdata/output/reddit_similarity/subreddits_by_num_comments_nsfw.csv', index=False)
+df.to_csv('/gscratch/scrubbed/comdata/reddit_similarity/subreddits_by_num_comments_nonsfw.csv', index=False)

@@ -24,8 +24,7 @@ def open_fileset(files):
     for fh in files:
         print(fh)
         lines = open_input_file(fh)
-        for line in lines:
-            yield line
+        yield from lines
 
 def open_input_file(input_filename):
     if re.match(r'.*\.7z$', input_filename):
@@ -39,7 +38,7 @@ def open_input_file(input_filename):
     elif re.match(r'.*\.xz', input_filename):
         cmd = ["xzcat",'-dk', '-T 20',input_filename]
     elif re.match(r'.*\.zst',input_filename):
-        cmd = ['zstd','-dck', input_filename]
+        cmd = ['/kloneusr/bin/zstd','-dck', input_filename,  '--memory=2048MB --stdout']
     elif re.match(r'.*\.gz',input_filename):
         cmd = ['gzip','-dc', input_filename]
     try:

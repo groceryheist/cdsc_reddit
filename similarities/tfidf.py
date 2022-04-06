@@ -4,7 +4,7 @@ from pyspark.sql import functions as f
 from similarities_helper import tfidf_dataset, build_weekly_tfidf_dataset, select_topN_subreddits
 
 def _tfidf_wrapper(func, inpath, outpath, topN, term_colname, exclude, included_subreddits):
-    spark = SparkSession.builder.getOrCreate()y
+    spark = SparkSession.builder.getOrCreate()
 
     df = spark.read.parquet(inpath)
 

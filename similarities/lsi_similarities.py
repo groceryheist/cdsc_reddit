@@ -5,19 +5,20 @@ from similarities_helper import *
 #from similarities_helper import similarities, lsi_column_similarities
 from functools import partial
 
-inpath = "/gscratch/comdata/users/nathante/competitive_exclusion_reddit/data/tfidf/comment_terms_compex.parquet/"
-term_colname='term'
-outfile='/gscratch/comdata/users/nathante/competitive_exclusion_reddit/data/similarity/comment_terms_compex_LSI'
-n_components=[10,50,100]
-included_subreddits="/gscratch/comdata/users/nathante/competitive_exclusion_reddit/data/included_subreddits.txt"
-n_iter=5
-random_state=1968
-algorithm='arpack'
-topN = None
-from_date=None
-to_date=None
-min_df=None
-max_df=None
+# inpath = "/gscratch/comdata/users/nathante/competitive_exclusion_reddit/data/tfidf/comment_terms_compex.parquet/"
+# term_colname='term'
+# outfile='/gscratch/comdata/users/nathante/competitive_exclusion_reddit/data/similarity/comment_terms_compex_LSI'
+# n_components=[10,50,100]
+# included_subreddits="/gscratch/comdata/users/nathante/competitive_exclusion_reddit/data/included_subreddits.txt"
+# n_iter=5
+# random_state=1968
+# algorithm='arpack'
+# topN = None
+# from_date=None
+# to_date=None
+# min_df=None
+# max_df=None
+
 def lsi_similarities(inpath, term_colname, outfile, min_df=None, max_df=None, included_subreddits=None, topN=None, from_date=None, to_date=None, tfidf_colname='tf_idf',n_components=100,n_iter=5,random_state=1968,algorithm='arpack',lsi_model=None):
     print(n_components,flush=True)
 
@@ -62,7 +63,7 @@ def author_lsi_similarities(inpath='/gscratch/comdata/output/reddit_similarity/t
                             n_components=n_components
                                )
 
-def author_tf_similarities(inpath='/gscratch/comdata/output/reddit_similarity/tfidf/comment_authors_100k.parquet',outfile=None, min_df=2, max_df=None, included_subreddits=None, topN=None, from_date=None, to_date=None,n_components=300,n_iter=5,random_state=1968):
+def author_tf_similarities(inpath='/gscratch/comdata/output/reddit_similarity/tfidf/comment_authors_100k.parquet',outfile=None, min_df=2, max_df=None, included_subreddits=None, topN=None, from_date=None, to_date=None,algorithm='arpack',n_components=300,n_iter=5,random_state=1968):
     return lsi_similarities(inpath,
                             'author',
                             outfile,

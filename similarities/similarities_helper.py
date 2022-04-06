@@ -262,6 +262,7 @@ def lsi_column_similarities(tfidfmat,n_components=300,n_iter=10,random_state=196
 
     lsimat = mod.transform(tfidfmat.T)
     if lsi_model_save is not None:
+        Path(lsi_model_save).parent.mkdir(exist_ok=True, parents=True)
         pickle.dump(mod, open(lsi_model_save,'wb'))
 
     sims_list = []
