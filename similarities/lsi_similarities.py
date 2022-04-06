@@ -5,14 +5,14 @@ from similarities_helper import *
 #from similarities_helper import similarities, lsi_column_similarities
 from functools import partial
 
-# inpath = "/gscratch/comdata/users/nathante/competitive_exclusion_reddit/data/tfidf/comment_terms_compex.parquet/"
-# term_colname='term'
-# outfile='/gscratch/comdata/users/nathante/competitive_exclusion_reddit/data/similarity/comment_terms_compex_LSI'
+# inpath = "/gscratch/comdata/users/nathante/competitive_exclusion_reddit/data/tfidf/comment_authors_compex.parquet"
+# term_colname='authors'
+# outfile='/gscratch/comdata/users/nathante/competitive_exclusion_reddit/data/similarity/comment_test_compex_LSI'
 # n_components=[10,50,100]
 # included_subreddits="/gscratch/comdata/users/nathante/competitive_exclusion_reddit/data/included_subreddits.txt"
 # n_iter=5
 # random_state=1968
-# algorithm='arpack'
+# algorithm='randomized'
 # topN = None
 # from_date=None
 # to_date=None
