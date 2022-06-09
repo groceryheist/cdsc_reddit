@@ -3,6 +3,9 @@ srun_singularity=source /gscratch/comdata/users/nathante/cdsc_reddit/bin/activat
 similarity_data=/gscratch/comdata/output/reddit_similarity
 clustering_data=/gscratch/comdata/output/reddit_clustering
 kmeans_selection_grid=--max_iters=[3000] --n_inits=[10] --n_clusters=[100,500,1000,1250,1500,1750,2000]
+
+umap_hdbscan_selection_grid=--min_cluster_sizes=[2] --min_samples=[2,3,4,5] --cluster_selection_epsilons=[0,0.01,0.05,0.1,0.15,0.2] --cluster_selection_methods=[eom,leaf] --n_neighbors=[5,15,25,50,75,100] --learning_rate=[1] --min_dist=[0,0.1,0.25,0.5,0.75,0.9,0.99] --local_connectivity=[1]
+
 hdbscan_selection_grid=--min_cluster_sizes=[2,3,4,5] --min_samples=[2,3,4,5] --cluster_selection_epsilons=[0,0.01,0.05,0.1,0.15,0.2] --cluster_selection_methods=[eom,leaf]
 affinity_selection_grid=--dampings=[0.5,0.6,0.7,0.8,0.95,0.97,0.99] --preference_quantiles=[0.1,0.3,0.5,0.7,0.9] --convergence_iters=[15]
 
@@ -91,11 +94,27 @@ ${terms_10k_output_lsi}/hdbscan/selection_data.csv:selection.py ${terms_10k_inpu
 ${authors_tf_10k_output_lsi}/hdbscan/selection_data.csv:clustering.py ${authors_tf_10k_input_lsi} clustering_base.py hdbscan_clustering.py
 	$(srun_singularity) python3 hdbscan_clustering_lsi.py --inpath=${authors_tf_10k_input_lsi} --outpath=${authors_tf_10k_output_lsi}/hdbscan --savefile=${authors_tf_10k_output_lsi}/hdbscan/selection_data.csv $(hdbscan_selection_grid)
 
+${authors_tf_10k_output_lsi}/umap_hdbscan/selection_data.csv:umap_hdbscan_clustering_lsi.py
+	$(srun_singularity) python3 umap_hdbscan_clustering_lsi.py --inpath=${authors_tf_10k_input_lsi} --outpath=${authors_tf_10k_output_lsi}/umap_hdbscan --savefile=${authors_tf_10k_output_lsi}/umap_hdbscan/selection_data.csv $(umap_hdbscan_selection_grid)
+
+
 ${terms_10k_output_lsi}/best_hdbscan.feather:${terms_10k_output_lsi}/hdbscan/selection_data.csv pick_best_clustering.py
 	$(srun_singularity) python3 pick_best_clustering.py $< $@ --min_clusters=50 --max_isolates=5000 --min_cluster_size=2
 
 ${authors_tf_10k_output_lsi}/best_hdbscan.feather:${authors_tf_10k_output_lsi}/hdbscan/selection_data.csv pick_best_clustering.py
 	$(srun_singularity) python3 pick_best_clustering.py $< $@ --min_clusters=50 --max_isolates=5000 --min_cluster_size=2
+
+${authors_tf_10k_output_lsi}/best_umap_hdbscan_2.feather:${authors_tf_10k_output_lsi}/umap_hdbscan/selection_data.csv pick_best_clustering.py
+	$(srun_singularity) python3 pick_best_clustering.py $< $@ --min_clusters=50 --max_isolates=5000 --min_cluster_size=2
+
+best_umap_hdbscan.feather:${authors_tf_10k_output_lsi}/best_umap_hdbscan_2.feather
+
+# {'lsi_dimensions': 700, 'outpath': '/gscratch/comdata/output/reddit_clustering/subreddit_comment_authors-tf_10k_LSI/umap_hdbscan', 'silhouette_score': 0.27616957, 'name': 'mcs-2_ms-5_cse-0.05_csm-leaf_nn-15_lr-1.0_md-0.1_lc-1_lsi-700', 'n_clusters': 547, 'n_isolates': 2093, 'silhouette_samples': '/gscratch/comdata/output/reddit_clustering/subreddit_comment_authors-tf_10k_LSI/umap_hdbscan/silhouette_samples-mcs-2_ms-5_cse-0.05_csm-leaf_nn-15_lr-1.0_md-0.1_lc-1_lsi-700.feather', 'min_cluster_size': 2, 'min_samples': 5, 'cluster_selection_epsilon': 0.05, 'cluster_selection_method': 'leaf', 'n_neighbors': 15, 'learning_rate': 1.0, 'min_dist': 0.1, 'local_connectivity': 1, 'n_isolates_str': '2093', 'n_isolates_0': False}
+
+best_umap_grid=--min_cluster_sizes=[2] --min_samples=[5] --cluster_selection_epsilons=[0.05] --cluster_selection_methods=[leaf] --n_neighbors=[15] --learning_rate=[1] --min_dist=[0.1] --local_connectivity=[1] --save_step1=True
+
+umap_hdbscan_coords:
+	python3 umap_hdbscan_clustering_lsi.py --inpath=${authors_tf_10k_input_lsi} --outpath=${authors_tf_10k_output_lsi}/umap_hdbscan --savefile=/dev/null ${best_umap_grid}
 
 clean_affinity:
 	rm -f ${authors_10k_output}/affinity/selection_data.csv
@@ -159,7 +178,7 @@ clean_lsi_terms:
 
 clean: clean_affinity clean_kmeans clean_hdbscan
 
-PHONY: clean clean_affinity clean_kmeans clean_hdbscan clean_authors clean_authors_tf clean_terms terms_10k authors_10k authors_tf_10k
+PHONY: clean clean_affinity clean_kmeans clean_hdbscan clean_authors clean_authors_tf clean_terms terms_10k authors_10k authors_tf_10k best_umap_hdbscan.feather umap_hdbscan_coords
 
 # $(clustering_data)/subreddit_comment_authors_30k.feather/SUCCESS:selection.py $(similarity_data)/subreddit_comment_authors_30k.feather clustering.py
 # 	$(srun_singularity) python3 selection.py $(similarity_data)/subreddit_comment_authors_30k.feather $(clustering_data)/subreddit_comment_authors_30k $(selection_grid) -J 10 && touch $(clustering_data)/subreddit_comment_authors_30k.feather/SUCCESS
