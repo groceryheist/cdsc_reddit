@@ -63,25 +63,28 @@ class umap_hdbscan_grid_sweep(twoway_grid_sweep):
               min_samples,
               cluster_selection_epsilon,
               cluster_selection_method,
+              n_components,
               n_neighbors,
               learning_rate,
               min_dist,
-              local_connectivity
+              local_connectivity,
+              densmap
               ):
-        return f"mcs-{min_cluster_size}_ms-{min_samples}_cse-{cluster_selection_epsilon}_csm-{cluster_selection_method}_nn-{n_neighbors}_lr-{learning_rate}_md-{min_dist}_lc-{local_connectivity}"
+        return f"mcs-{min_cluster_size}_ms-{min_samples}_cse-{cluster_selection_epsilon}_csm-{cluster_selection_method}_nc-{n_components}_nn-{n_neighbors}_lr-{learning_rate}_md-{min_dist}_lc-{local_connectivity}_dm-{densmap}"
 
 @dataclass
 class umap_hdbscan_clustering_result(hdbscan_clustering_result):
+    n_components:int
     n_neighbors:int
     learning_rate:float
     min_dist:float
     local_connectivity:int
+    densmap:bool
 
 class umap_hdbscan_job(twoway_clustering_job):
     def __init__(self, infile, outpath, name,
-                 umap_args = {"n_neighbors":15, "learning_rate":1, "min_dist":1, "local_connectivity":1},
+                 umap_args = {"n_components":2,"n_neighbors":15, "learning_rate":1, "min_dist":1, "local_connectivity":1,'densmap':False},
                  hdbscan_args = {"min_cluster_size":2, "min_samples":1, "cluster_selection_epsilon":0, "cluster_selection_method":'eom'},
-                 save_step1 = False,
                  *args,
                  **kwargs):
         super().__init__(infile,
@@ -91,15 +94,16 @@ class umap_hdbscan_job(twoway_clustering_job):
                          call2=umap_hdbscan_job._hdbscan_clustering,
                          args1=umap_args,
                          args2=hdbscan_args,
-                         save_step1=save_step1,
                          *args,
                          **kwargs
                          )
 
+        self.n_components = umap_args['n_components']
         self.n_neighbors = umap_args['n_neighbors']
         self.learning_rate = umap_args['learning_rate']
         self.min_dist = umap_args['min_dist']
         self.local_connectivity = umap_args['local_connectivity']
+        self.densmap = umap_args['densmap']
         self.min_cluster_size = hdbscan_args['min_cluster_size']
         self.min_samples = hdbscan_args['min_samples']
         self.cluster_selection_epsilon = hdbscan_args['cluster_selection_epsilon']
@@ -139,14 +143,17 @@ class umap_hdbscan_job(twoway_clustering_job):
                                                      min_samples=self.min_samples,
                                                      cluster_selection_epsilon=self.cluster_selection_epsilon,
                                                      cluster_selection_method=self.cluster_selection_method,
+                                                     n_components = self.n_components,
                                                      n_neighbors = self.n_neighbors,
                                                      learning_rate = self.learning_rate,
                                                      min_dist = self.min_dist,
-                                                     local_connectivity=self.local_connectivity
+                                                     local_connectivity=self.local_connectivity,
+                                                     densmap=self.densmap
                                                      )
         return self.result
 
-def run_umap_hdbscan_grid_sweep(savefile, inpath, outpath, n_neighbors = [15], learning_rate=[1], min_dist=[1], local_connectivity=[1],
+def run_umap_hdbscan_grid_sweep(savefile, inpath, outpath, n_neighbors = [15], n_components=[2], learning_rate=[1], min_dist=[1], local_connectivity=[1],
+                                densmap=[False],
                                 min_cluster_sizes=[2], min_samples=[1], cluster_selection_epsilons=[0], cluster_selection_methods=['eom']):
     """Run umap + hdbscan clustering once or more with different parameters.
     
@@ -171,6 +178,8 @@ def run_umap_hdbscan_grid_sweep(savefile, inpath, outpath, n_neighbors = [15], l
                  'learning_rate':list(map(float,learning_rate)),
                  'min_dist':list(map(float,min_dist)),
                  'local_connectivity':list(map(int,local_connectivity)),
+                 'n_components':list(map(int, n_components)),
+                 'densmap':list(map(bool,densmap))
                  }
 
     hdbscan_args = {'min_cluster_size':list(map(int,min_cluster_sizes)),

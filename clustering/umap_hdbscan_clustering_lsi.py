@@ -9,14 +9,13 @@ class umap_hdbscan_clustering_result_lsi(umap_hdbscan_clustering_result, lsi_res
     pass 
 
 class umap_hdbscan_lsi_job(umap_hdbscan_job, lsi_mixin):
-    def __init__(self, infile, outpath, name, umap_args, hdbscan_args, lsi_dims, save_step1=False):
+    def __init__(self, infile, outpath, name, umap_args, hdbscan_args, lsi_dims):
         super().__init__(
             infile,
             outpath,
             name,
             umap_args,
-            hdbscan_args,
-            save_step1
+            hdbscan_args
         )
         super().set_lsi_dims(lsi_dims)
 
@@ -32,8 +31,7 @@ class umap_hdbscan_lsi_grid_sweep(twoway_lsi_grid_sweep):
                  lsi_dims,
                  outpath,
                  umap_args,
-                 hdbscan_args,
-                 save_step1
+                 hdbscan_args
                  ):
 
         super().__init__(umap_hdbscan_lsi_job,
@@ -42,8 +40,7 @@ class umap_hdbscan_lsi_grid_sweep(twoway_lsi_grid_sweep):
                          lsi_dims,
                          outpath,
                          umap_args,
-                         hdbscan_args,
-                         save_step1
+                         hdbscan_args
                          )
         
 
@@ -55,11 +52,11 @@ class _umap_hdbscan_lsi_grid_sweep(twoway_grid_sweep):
                  lsi_dim,
                  umap_args,
                  hdbscan_args,
-                 save_step1):
+                 ):
 
         self.lsi_dim = lsi_dim
         self.jobtype = umap_hdbscan_lsi_job
-        super().__init__(self.jobtype, inpath, outpath, self.namer, umap_args, hdbscan_args, save_step1, lsi_dim)
+        super().__init__(self.jobtype, inpath, outpath, self.namer, umap_args, hdbscan_args, lsi_dim)
 
 
     def namer(self, *args, **kwargs):
@@ -67,8 +64,9 @@ class _umap_hdbscan_lsi_grid_sweep(twoway_grid_sweep):
         s += f"_lsi-{self.lsi_dim}"
         return s
 
-def run_umap_hdbscan_lsi_grid_sweep(savefile, inpath, outpath, n_neighbors = [15], learning_rate=[1], min_dist=[1], local_connectivity=[1],
-                                    min_cluster_sizes=[2], min_samples=[1], cluster_selection_epsilons=[0], cluster_selection_methods=['eom'], lsi_dimensions='all', save_step1 = False):
+def run_umap_hdbscan_lsi_grid_sweep(savefile, inpath, outpath, n_neighbors = [15], n_components=[2], learning_rate=[1], min_dist=[1], local_connectivity=[1], 
+                                densmap=[False],
+                                    min_cluster_sizes=[2], min_samples=[1], cluster_selection_epsilons=[0], cluster_selection_methods=['eom'], lsi_dimensions='all'):
     """Run hdbscan clustering once or more with different parameters.
     
     Usage:
@@ -90,6 +88,8 @@ def run_umap_hdbscan_lsi_grid_sweep(savefile, inpath, outpath, n_neighbors = [15
                  'learning_rate':list(map(float,learning_rate)),
                  'min_dist':list(map(float,min_dist)),
                  'local_connectivity':list(map(int,local_connectivity)),
+                 'n_components':list(map(int, n_components)),
+                 'densmap':list(map(bool,densmap))
                  }
 
     hdbscan_args = {'min_cluster_size':list(map(int,min_cluster_sizes)),
@@ -101,8 +101,7 @@ def run_umap_hdbscan_lsi_grid_sweep(savefile, inpath, outpath, n_neighbors = [15
                                       lsi_dimensions,
                                       outpath,
                                       umap_args,
-                                      hdbscan_args,
-                                      save_step1
+                                      hdbscan_args
                                       )
                                  
 

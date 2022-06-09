@@ -29,7 +29,7 @@ class lsi_grid_sweep(grid_sweep):
         self.jobs = list(chain(*map(lambda gs: gs.jobs, self.subgrids)))
 
 class twoway_lsi_grid_sweep(twoway_grid_sweep):
-    def __init__(self, jobtype, subsweep, inpath, lsi_dimensions, outpath, args1, args2, save_step1):
+    def __init__(self, jobtype, subsweep, inpath, lsi_dimensions, outpath, args1, args2):
         self.jobtype = jobtype
         self.subsweep = subsweep
         inpath = Path(inpath)
@@ -40,5 +40,5 @@ class twoway_lsi_grid_sweep(twoway_grid_sweep):
 
         lsi_nums = [int(p.stem) for p in lsi_paths]
         self.hasrun = False
-        self.subgrids = [self.subsweep(lsi_path, outpath, lsi_dim, args1, args2, save_step1) for lsi_dim, lsi_path in zip(lsi_nums, lsi_paths)]
+        self.subgrids = [self.subsweep(lsi_path, outpath, lsi_dim, args1, args2) for lsi_dim, lsi_path in zip(lsi_nums, lsi_paths)]
         self.jobs = list(chain(*map(lambda gs: gs.jobs, self.subgrids)))
