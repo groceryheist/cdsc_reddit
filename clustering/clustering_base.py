@@ -21,9 +21,9 @@ class clustering_job:
         self.subreddits, self.mat = self.read_distance_mat(self.infile)
         self.clustering = self.call(self.mat, *self.args, **self.kwargs)
         self.cluster_data = self.process_clustering(self.clustering, self.subreddits)
-        self.score = self.silhouette()
         self.outpath.mkdir(parents=True, exist_ok=True)
         self.cluster_data.to_feather(self.outpath/(self.name + ".feather"))
+
         self.hasrun = True
         self.cleanup()
 
@@ -62,6 +62,7 @@ class clustering_job:
         else:
             score = None
             self.silsampout = None
+
         return score
 
     def read_distance_mat(self, similarities, use_threads=True):
@@ -81,8 +82,12 @@ class clustering_job:
         self.n_clusters = len(set(clusters))
 
         print(f"found {self.n_clusters} clusters")
-
         cluster_data = pd.DataFrame({'subreddit': subreddits,'cluster':clustering.labels_})
+
+
+        self.score = self.silhouette()
+        print(f"silhouette_score:{self.score}")
+
 
         cluster_sizes = cluster_data.groupby("cluster").count().reset_index()
         print(f"the largest cluster has {cluster_sizes.loc[cluster_sizes.cluster!=-1].subreddit.max()} members")
@@ -125,7 +130,7 @@ class twoway_clustering_job(clustering_job):
         self.after_run()
         self.cleanup()
 
-    def after_run():
+    def after_run(self):
         self.score = self.silhouette()
         self.outpath.mkdir(parents=True, exist_ok=True)
         print(self.outpath/(self.name+".feather"))

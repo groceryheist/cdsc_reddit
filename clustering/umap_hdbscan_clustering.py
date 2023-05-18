@@ -110,7 +110,7 @@ class umap_hdbscan_job(twoway_clustering_job):
         self.cluster_selection_method = hdbscan_args['cluster_selection_method']
 
     def after_run(self):
-        coords = self.step1.emedding_
+        coords = self.step1.embedding_
         self.cluster_data['x'] = coords[:,0]
         self.cluster_data['y'] = coords[:,1]
         super().after_run()

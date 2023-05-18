@@ -29,14 +29,14 @@ df = df.withColumn("Day",f.dayofmonth(f.col("CreatedAt")))
 df = df.withColumn("subreddit_hash",f.sha2(f.col("subreddit"), 256)[0:3])
 
 # next we gotta resort it all.
-df = df.repartition("subreddit")
-df2 = df.sort(["subreddit","CreatedAt","id"],ascending=True)
+df = df.repartition(800,"subreddit","Year","Month")
+df2 = df.sort(["subreddit","Year","Month","CreatedAt","id"],ascending=True)
 df2 = df.sortWithinPartitions(["subreddit","CreatedAt","id"],ascending=True)
 df2.write.parquet("/gscratch/comdata/output/temp/reddit_submissions_by_subreddit.parquet2", mode='overwrite',compression='snappy')
 
 
 # # we also want to have parquet files sorted by author then reddit. 
-df = df.repartition("author")
-df3 = df.sort(["author","CreatedAt","id"],ascending=True)
+df = df.repartition(800,"author","subreddit","Year","Month")
+df3 = df.sort(["author","Year","Month","CreatedAt","id"],ascending=True)
 df3 = df.sortWithinPartitions(["author","CreatedAt","id"],ascending=True)
 df3.write.parquet("/gscratch/comdata/output/temp/reddit_submissions_by_author.parquet2", mode='overwrite',compression='snappy')

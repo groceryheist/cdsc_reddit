@@ -58,7 +58,7 @@ def parse_submission(post, names = None):
 def parse_dump(partition):
 
     N=10000
-    stream = open_fileset([f"/gscratch/comdata/raw_data/reddit_dumps/submissions/{partition}"])
+    stream = open_fileset([f"/gscratch/comdata/raw_data/submissions/{partition}"])
     rows = map(parse_submission,stream)
     schema = pa.schema([
         pa.field('id', pa.string(),nullable=True),
@@ -102,7 +102,7 @@ def parse_dump(partition):
 
         writer.close()
 
-def gen_task_list(dumpdir="/gscratch/comdata/raw_data/reddit_dumps/submissions"):
+def gen_task_list(dumpdir="/gscratch/comdata/raw_data/submissions"):
     files = list(find_dumps(dumpdir,base_pattern="RS_20*.*"))
     with open("submissions_task_list.sh",'w') as of:
         for fpath in files:
