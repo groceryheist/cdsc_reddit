@@ -35,7 +35,7 @@ Pushshift dumps are huge compressed json files with a lot of metadata that we ma
 1. Extracting json into (temporary, unpartitioned) parquet files using pyarrow.
 2. Repartitioning and sorting the data using pyspark.
 
-The final datasets are in `/gscratch/comdata/output.`
+The final datasets live in `/gscratch/comdata/output` on Hyak..
 
 - `reddit_comments_by_author.parquet` has comments partitioned and sorted by username (lowercase).
 - `reddit_comments_by_subreddit.parquet` has comments partitioned and sorted by subreddit name (lowercase).
@@ -110,7 +110,7 @@ It turns out that this is equivalent to taking the cosine of the two vectors.  S
 
 Cosine similarity with tf-idf is popular (indeed it has been applied to Reddit in research several times before) because it quantifies the correlation between the most characteristic terms for two communities.
 
-Compared to other approach to similarity like those using word embeddings or topic models it may struggle to handle polysemy, synonymy, or correlations between different terms.  Using phrase detection helps with this a little bit.  The advantages of this approach are simplicity and scalability.  I'm thinking about using [Latent Semantic Analysis](https://en.wikipedia.org/wiki/Latent_semantic_analysis "Wikipedia article on Latent semantic analysis") as an intermediate step to improve upon similarities based on raw tf-idfs. 
+Compared to other approach to similarity like those using word embeddings or topic models it may struggle to handle polysemy, synonymy, or correlations between different terms.  Using phrase detection helps with this a little bit.  The advantages of this approach are simplicity and scalability.  
 
-Even still, computing similarities between a large number of subreddits is computationally expensive and requires $n^2$ dot-product evaluations. 
-This can be sped up by passing `similarity-threshold=X` where $X>0$ into `term_comment_similarity.py`.  I used a cosine similarity function that's built into the spark matrix library which supports the `DIMSUM` algorithm for approximating matrix-matrix products.  This algorithm is commonly used in industry (i.e. at Twitter, Google) for large-scale similarity scoring.
+Therefore, we support [Latent Semantic Analysis](https://en.wikipedia.org/wiki/Latent_semantic_analysis "Wikipedia article on Latent semantic analysis") as an intermediate step to improve upon similarities based on raw tf-idfs. 
+LSI reduces the dimensionality of the data before computing cosine similariies. Doing so improves the face-validity of the resulting similarity measures and the results of downstream clustering analysis.
