@@ -26,7 +26,7 @@ ${authors_tf_10k_output_lsi}/best_hdbscan.feather:${authors_tf_10k_output_lsi}/h
 	$(srun_singularity) -c "source ~/.bashrc; python3 pick_best_clustering.py $< $@ --min_clusters=50 --max_isolates=5000 --min_cluster_size=2"
 
 ${authors_tf_10k_input_lsi}:
-	$(MAKE) -C ../similarities
+	$(MAKE) -C ../similarity
 
 clean:
 	rm -f ${authors_tf_10k_output_lsi}/affinity/selection_data.csv
