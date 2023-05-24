@@ -1,16 +1,20 @@
 from pyspark.sql import functions as f
 from pyspark.sql import SparkSession
 from pyspark.sql import Window
+from datetime import datetime
+from pathlib import Path
 
 spark = SparkSession.builder.getOrCreate()
 conf = spark.sparkContext.getConf()
 
-submissions = spark.read.parquet("/gscratch/comdata/output/reddit_submissions_by_subreddit.parquet")
+submissions = spark.read.parquet("../../data/reddit_submissions_by_subreddit.parquet")
+
+submissions = submissions.filter(f.col("CreatedAt") <= datetime(2020,4,13))
 
 prop_nsfw = submissions.select(['subreddit','over_18']).groupby('subreddit').agg(f.mean(f.col('over_18').astype('double')).alias('prop_nsfw'))
 
-df = spark.read.parquet("/gscratch/comdata/output/reddit_comments_by_subreddit.parquet")
-
+df = spark.read.parquet("../../data/reddit_comments_by_subreddit.parquet")
+df = df.filter(f.col("CreatedAt") <= datetime(2020,4,13))
 # remove /u/ pages
 df = df.filter(~df.subreddit.like("u_%"))
 
@@ -26,4 +30,6 @@ df = df.toPandas()
 
 df = df.sort_values("n_comments")
 
-df.to_csv('/gscratch/scrubbed/comdata/reddit_similarity/subreddits_by_num_comments_nonsfw.csv', index=False)
+outpath = Path("../../data/reddit_similarity/subreddits_by_num_comments_nonsfw.csv")
+outpath.parent.mkdir(exist_ok=True, parents=True)
+df.to_csv(str(outpath), index=False)
