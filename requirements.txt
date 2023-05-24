@@ -1,0 +1,10 @@
+setuptools
+wheel
+pyarrow
+pyspark
+scikit-learn
+pandas
+numpy
+fire
+hdbscan
+redditcleaner
