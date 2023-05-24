@@ -11,16 +11,11 @@ The reddit_cdsc project contains tools for working with Reddit data.  The projec
   - Extracting terms from Reddit comments in `tf_comments.py`
   - Detecting common phrases based on [Pointwise mutual information](https://en.wikipedia.org/wiki/Pointwise_mutual_information) "Wikipedia article on pointwise mutual information")
   - Building TF-IDF vectors for each subreddit `idf_comments.py` and (more experimentally) at the subreddit-week level `idf_comments_weekly.py` 
-  - Computing cosine similarities between subreddits based on TF-IDF `term_cosine_similarity.py`. 
+  - Using [Latent semantic indexing](https://en.wikipedia.org/wiki/Latent_semantic_analysis) to reduce the dimensionality of TF(-IDF) matrices. 
+  - Computing cosine similarities between subreddits based on TF-IDF.
+  - Using these similarities for clustering.
 
 Right now, two steps are still in earlier stages of progress:
-
-- Approach comparable to tf-idf for similarity between subreddits in terms of comment authors. 
-- Clustering subreddits based on cosine-similarities using [power iteration clustering (PIC)](http://www.cs.cmu.edu/~wcohen/postscript/icml2010-pic-final.pdf "Paper on power iteration clustering")
-
-The TF-IDF for comments still has some kinks to iron out to remove hyper links and bot comments. Right now subreddits that have similar automoderation messages appear very similar.
-
-The user interfaces for most of the scripts are pretty crappy and need to be refined for re-use by others. 
 
 ## Pulling data from [Pushshift](https://pushshift.io "Pushshift.io") ##
 
