@@ -1,7 +1,7 @@
 ---
 title: Utilities for Reddit Data Science
 ---
-
+© 2020 Nathan TeBlunthuis
 
 The reddit_cdsc project contains tools for working with Reddit data.  The project is designed for the hyak super computing system at The University of Washington.  It consists of a set of python and bash scripts and uses the [Pyspark](https://spark.apache.org/docs/latest/api/python/index.html "Pyspark documentation") and [pyarrow](https://arrow.apache.org/docs/python/ "documentation of python arrow bindings") to process large datasets.  As of November 1st 2020, the project is under active development by [Nate TeBlunthuis](https://wiki.communitydata.science/People#Nathan_TeBlunthuis_.28University_of_Washington.29 "Nate's profile on the Community Data Science Collective Wiki") and provides scripts for:
 
@@ -51,7 +51,7 @@ Breaking this down into two steps is useful because it allows us to decompress a
 | Term         | tf_idf |
 |:------------:|:------:|
 | christians   | 0.581  |
-| christianity | 0.569  |
+v| christianity | 0.569  |
 | kjv          | 0.568  |
 | bible        | 0.557  |
 | scripture    | 0.55   |
