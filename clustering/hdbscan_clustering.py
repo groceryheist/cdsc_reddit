@@ -11,13 +11,6 @@ from multiprocessing import cpu_count
 import fire
 
 def test_select_hdbscan_clustering():
-    # select_hdbscan_clustering("/gscratch/comdata/output/reddit_similarity/subreddit_comment_authors-tf_30k_LSI",
-    #                           "test_hdbscan_author30k",
-    #                           min_cluster_sizes=[2],
-    #                           min_samples=[1,2],
-    #                           cluster_selection_epsilons=[0,0.05,0.1,0.15],
-    #                           cluster_selection_methods=['eom','leaf'],
-    #                           lsi_dimensions='all')
     inpath = "/gscratch/comdata/users/nathante/competitive_exclusion_reddit/data/similarity/comment_authors_compex_LSI"
     outpath = "test_hdbscan";
     min_cluster_sizes=[2,3,4];
@@ -28,15 +21,7 @@ def test_select_hdbscan_clustering():
     gs = hdbscan_lsi_grid_sweep(inpath, "all", outpath, min_cluster_sizes, min_samples, cluster_selection_epsilons, cluster_selection_methods)
     gs.run(20)
     gs.save("test_hdbscan/lsi_sweep.csv")
-    # job1 = hdbscan_lsi_job(infile=inpath, outpath=outpath, name="test", lsi_dims=500, min_cluster_size=2, min_samples=1,cluster_selection_epsilon=0,cluster_selection_method='eom')
-    # job1.run()
-    # print(job1.get_info())
 
-    # df = pd.read_csv("test_hdbscan/selection_data.csv")
-    # test_select_hdbscan_clustering()
-    # check_clusters = pd.read_feather("test_hdbscan/500_2_2_0.1_eom.feather")
-    # silscores = pd.read_feather("test_hdbscan/silhouette_samples500_2_2_0.1_eom.feather")
-    # c = check_clusters.merge(silscores,on='subreddit')#    fire.Fire(select_hdbscan_clustering)
 class hdbscan_grid_sweep(grid_sweep):
     def __init__(self,
                  inpath,
@@ -155,5 +140,3 @@ def make_KNN_plots():
 if __name__ == "__main__":
     fire.Fire(run_hdbscan_grid_sweep)
     
-#    test_select_hdbscan_clustering()
-    #fire.Fire(select_hdbscan_clustering)  

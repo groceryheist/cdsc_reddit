@@ -6,7 +6,6 @@ from os import path
 import hashlib
 
 shasums1 = requests.get("https://files.pushshift.io/reddit/comments/sha256sum.txt").text
-#shasums2 = requests.get("https://files.pushshift.io/reddit/comments/daily/sha256sum.txt").text
 
 shasums = shasums1 
 dumpdir = "/gscratch/comdata/raw_data/reddit_dumps/comments"

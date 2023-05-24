@@ -21,13 +21,6 @@ class tf_weight(Enum):
     MaxTF = 1
     Norm05 = 2
 
-# infile = "/gscratch/comdata/output/reddit_similarity/tfidf_weekly/comment_terms.parquet"
-# cache_file = "/gscratch/comdata/users/nathante/cdsc_reddit/similarities/term_tfidf_entries_bak.parquet"
-
-# subreddits missing after this step don't have any terms that have a high enough idf
-# try rewriting without merges
-
-# does reindex_tfidf, but without reindexing.
 def reindex_tfidf(*args, **kwargs):
     df, tfidf_ds, ds_filter = _pull_or_reindex_tfidf(*args, **kwargs, reindex=True)
 
@@ -164,8 +157,6 @@ def similarities(inpath, simfunc, term_colname, outfile, min_df=None, max_df=Non
     mat = csr_matrix((entries[tfidf_colname],(entries[term_id_new]-1, entries.subreddit_id_new-1)))
 
     print("loading matrix")        
-
-    #    mat = read_tfidf_matrix("term_tfidf_entries7ejhvnvl.parquet", term_colname)
 
     print(f'computing similarities on mat. mat.shape:{mat.shape}')
     print(f"size of mat is:{mat.data.nbytes}",flush=True)

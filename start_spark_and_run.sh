@@ -13,7 +13,7 @@ echo "source $SPARK_CONF_DIR/spark-env.sh" >> job.script.sh
 echo "start_spark_cluster.sh" >> job_script.sh
 echo "spark-submit --verbose --master spark://\$(hostname):$SPARK_MASTER_PORT $2 ${@:3}" >> job_script.sh
 echo "stop-all.sh" >> job_script.sh
-#echo "singularity instance stop --all" >> job_script.sh
+
 chmod +x job_script.sh
 
 let "cpus = $1 * 40" 

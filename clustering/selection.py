@@ -16,8 +16,7 @@ p.save("isolates_x_score.png")
 p = pn.ggplot(df,pn.aes(y='n_clusters',x='n_isolates',color='silhouette_score')) + pn.geom_point()
 p.save("clusters_x_isolates.png")
 
-# the best result for hdbscan seems like this one: it has a decent number of 
-# i think I prefer the 'eom' clustering style because larger clusters are less likely to suffer from ommitted variables
+# the best result for hdbscan seems like this one
 best_eom = df[(df.n_isolates <5000)&(df.silhouette_score>0.4)&(df.cluster_selection_method=='eom')&(df.min_cluster_size==2)].iloc[df.shape[1]]
 
 best_lsi = df[(df.n_isolates <5000)&(df.silhouette_score>0.4)&(df.cluster_selection_method=='leaf')&(df.min_cluster_size==2)].iloc[df.shape[1]]

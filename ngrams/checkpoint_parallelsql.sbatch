@@ -19,8 +19,5 @@ module load parallel_sql
 echo $(which perl)
 conda list pyarrow
 which python3
-#Put here commands to load other modules (e.g. matlab etc.)
-#Below command means that parallel_sql will get tasks from the database
-#and run them on the node (in parallel). So a 16 core node will have
-#16 tasks running at one time.
+
 parallel-sql --sql -a parallel --exit-on-term --jobs 4

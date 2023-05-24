@@ -25,12 +25,6 @@ df = df.withColumn("Month",f.month(f.col("CreatedAt")))
 df = df.withColumn("Year",f.year(f.col("CreatedAt")))
 df = df.withColumn("Day",f.dayofmonth(f.col("CreatedAt")))
 
-# df = df.repartition(1200,'subreddit')
-# df2 = df.sort(["subreddit","CreatedAt","link_id","parent_id","Year","Month","Day"],ascending=True)
-# df2 = df2.sortWithinPartitions(["subreddit","CreatedAt","link_id","parent_id","Year","Month","Day"],ascending=True)
-# df2.write.parquet("/gscratch/scrubbed/comdata/reddit_comments_by_subreddit.parquet", mode='overwrite', compression='snappy')
-
-#df = spark.read.parquet("/gscratch/scrubbed/comdata/reddit_comments_by_subreddit.parquet")
 df = df.repartition(2400,'author','subreddit',"Year","Month","Day")
 df3 = df.sort(["author","subreddit","Year","Month","Day","CreatedAt","link_id","parent_id"],ascending=True)
 df3 = df3.sortWithinPartitions(["author","subreddit","Year","Month","Day","CreatedAt","link_id","parent_id"],ascending=True)

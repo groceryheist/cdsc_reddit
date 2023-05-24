@@ -8,7 +8,6 @@ import fire
 import sys
 import numpy as np
 
-# silhouette is the only one that doesn't need the feature matrix. So it's probably the only one that's worth trying. 
 @dataclass
 class affinity_clustering_result(clustering_result):
     damping:float
