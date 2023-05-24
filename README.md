@@ -1,7 +1,7 @@
----
-title: Utilities for Reddit Data Science
----
+#title: CDSC Utilities for Reddit Data Science#
+
 © 2020 Nathan TeBlunthuis
+
 
 The reddit_cdsc project contains tools for working with Reddit data.  The project is designed for the hyak super computing system at The University of Washington.  It consists of a set of python and bash scripts and uses the [Pyspark](https://spark.apache.org/docs/latest/api/python/index.html "Pyspark documentation") and [pyarrow](https://arrow.apache.org/docs/python/ "documentation of python arrow bindings") to process large datasets.  As of November 1st 2020, the project is under active development by [Nate TeBlunthuis](https://wiki.communitydata.science/People#Nathan_TeBlunthuis_.28University_of_Washington.29 "Nate's profile on the Community Data Science Collective Wiki") and provides scripts for:
 
@@ -15,7 +15,14 @@ The reddit_cdsc project contains tools for working with Reddit data.  The projec
   - Computing cosine similarities between subreddits based on TF-IDF.
   - Using these similarities for clustering.
 
-Right now, two steps are still in earlier stages of progress:
+## Setup ##
+
+Requires python >= 3.8.
+Install the dependencies using pip.
+`pip3 install -r requirements.txt`
+
+You're unlikely to be able to run everything without a hitch unless you have a slurm system configured the same as Hyak at the University of Washington. Contact Nathan TeBlunthuis (nathante@umich.edu; @groceryheist on github) for assistance. 
+
 
 ## Pulling data from [Pushshift](https://pushshift.io "Pushshift.io") ##
 
